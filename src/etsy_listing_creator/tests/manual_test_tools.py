@@ -23,35 +23,38 @@ def test_stability_ai():
             raise ValueError("STABILITY_HOST environment variable is not set")
         if not os.getenv("STABILITY_KEY"):
             raise ValueError("STABILITY_KEY environment variable is not set")
+        if not os.getenv("IMGBB_API_KEY"):
+            raise ValueError("IMGBB_API_KEY environment variable is required for image uploading")
         print("✓ Environment variables found")
         
-        # Generate an image
-        print("\nGenerating test image...")
+        # Generate and upload an image
+        print("\nGenerating and uploading test image...")
         print("This may take a minute...")
         prompt = "A beautiful digital art of a mountain landscape, trending on artstation"
-        stability_image_path = tool._run(prompt)
+        local_path, public_url = tool.generate_and_upload(prompt)
         
         # Verify result
         print("\nVerifying result...")
-        path_obj = Path(stability_image_path)
+        path_obj = Path(local_path)
         if not path_obj.exists():
-            print(f"✗ Failed: {stability_image_path} not found")
-            return None
+            print(f"✗ Failed: {local_path} not found")
+            return None, None
         else:
             size = path_obj.stat().st_size
             if size < 1000:  # Less than 1KB is suspicious
-                print(f"⚠ Warning: {stability_image_path} seems too small ({size} bytes)")
-                return None
+                print(f"⚠ Warning: {local_path} seems too small ({size} bytes)")
+                return None, None
             else:
-                print(f"✓ Generated: {stability_image_path} ({size} bytes)")
+                print(f"✓ Generated: {local_path} ({size} bytes)")
+                print(f"✓ Uploaded to: {public_url}")
                 print(f"✓ Prompt used: {prompt}")
-                return stability_image_path
+                return local_path, public_url
         
     except Exception as e:
         print(f"\n✗ Error: {str(e)}")
-        return None
+        return None, None
 
-def test_dynamic_mockup(stability_image_path=None):
+def test_dynamic_mockup(stability_image_info=None):
     """Test Dynamic Mockups tool with real API calls"""
     print("\n=== Testing Dynamic Mockups Tool ===")
     
@@ -72,7 +75,7 @@ def test_dynamic_mockup(stability_image_path=None):
         print(f"✓ API key found: {api_key[:10]}...")
         
         # Create a test image if we don't have a Stability image
-        if not stability_image_path:
+        if not stability_image_info:
             print("\nCreating test image...")
             img = Image.new('RGB', (800, 800), color='white')
             # Add some content to make it more realistic
@@ -106,12 +109,21 @@ def test_dynamic_mockup(stability_image_path=None):
             
             test_mockup(tool, template_name, data, "sandbox")
 
-            if stability_image_path:
+            if stability_image_info:
+                local_path, public_url = stability_image_info
                 print("\nTesting with Stability AI generated image...")
-                # TODO: In production, we would upload the image to a public URL first
-                # For now, we'll note that we need this step
-                print("Note: To use the Stability AI image, we need to implement image uploading first")
-                print(f"Generated image path: {stability_image_path}")
+                data = {
+                    "mockup_uuid": uuids["mockup_uuid"],
+                    "smart_objects": [
+                        {
+                            "uuid": uuids["smart_object_uuid"],
+                            "asset": {
+                                "url": public_url
+                            }
+                        }
+                    ]
+                }
+                test_mockup(tool, template_name, data, "stability")
         
     except Exception as e:
         print(f"\n✗ Error: {str(e)}")
@@ -189,5 +201,5 @@ if __name__ == "__main__":
     load_dotenv()
     
     # Run tests
-    stability_image = test_stability_ai()
-    test_dynamic_mockup(stability_image) 
+    stability_image_info = test_stability_ai()
+    test_dynamic_mockup(stability_image_info) 
