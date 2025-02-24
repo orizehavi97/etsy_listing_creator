@@ -54,12 +54,9 @@ def test_stability_ai():
         print(f"\n✗ Error: {str(e)}")
         return None, None
 
-def test_dynamic_mockup(stability_image_info=None):
+def test_dynamic_mockup(stability_image_info):
     """Test Dynamic Mockups tool with real API calls"""
     print("\n=== Testing Dynamic Mockups Tool ===")
-    
-    # Initialize test image path
-    test_image_path = Path("test_input.jpg")
     
     try:
         # Initialize the tool
@@ -74,68 +71,40 @@ def test_dynamic_mockup(stability_image_info=None):
             raise ValueError("DYNAMIC_MOCKUPS_API_KEY not found in environment variables. Please add it to your .env file.")
         print(f"✓ API key found: {api_key[:10]}...")
         
-        # Create a test image if we don't have a Stability image
         if not stability_image_info:
-            print("\nCreating test image...")
-            img = Image.new('RGB', (800, 800), color='white')
-            # Add some content to make it more realistic
-            for i in range(0, 800, 100):
-                for j in range(0, 800, 100):
-                    color = 'red' if (i + j) % 200 == 0 else 'blue'
-                    img.paste(color, (i, j, i + 50, j + 50))
-            img.save(test_image_path, format='JPEG', quality=95)
-            print("✓ Test image created")
+            raise ValueError("No Stability AI image provided")
         
-        # Test each template individually
-        print("\nTesting templates one by one...")
+        local_path, public_url = stability_image_info
+        print(f"\nUsing Stability AI image: {local_path}")
+        print(f"Public URL: {public_url}")
+        
+        # Test each template
+        print("\nTesting templates...")
         for template_name, uuids in tool._templates.items():
-            print(f"\nTesting template: {template_name}")
+            print(f"\nProcessing template: {template_name}")
             print(f"Mockup UUID: {uuids['mockup_uuid']}")
             print(f"Smart Object UUID: {uuids['smart_object_uuid']}")
             
-            # First test with sandbox image
-            print("\nTesting with sandbox image...")
             data = {
                 "mockup_uuid": uuids["mockup_uuid"],
                 "smart_objects": [
                     {
                         "uuid": uuids["smart_object_uuid"],
                         "asset": {
-                            "url": "https://app-dynamicmockups-production.s3.eu-central-1.amazonaws.com/static/api_sandbox_icon.png"
+                            "url": public_url
                         }
                     }
                 ]
             }
             
-            test_mockup(tool, template_name, data, "sandbox")
-
-            if stability_image_info:
-                local_path, public_url = stability_image_info
-                print("\nTesting with Stability AI generated image...")
-                data = {
-                    "mockup_uuid": uuids["mockup_uuid"],
-                    "smart_objects": [
-                        {
-                            "uuid": uuids["smart_object_uuid"],
-                            "asset": {
-                                "url": public_url
-                            }
-                        }
-                    ]
-                }
-                test_mockup(tool, template_name, data, "stability")
+            test_mockup(tool, template_name, data)
         
     except Exception as e:
         print(f"\n✗ Error: {str(e)}")
-    
-    finally:
-        # Cleanup
-        if test_image_path.exists():
-            test_image_path.unlink()
 
-def test_mockup(tool, template_name, data, test_type):
+def test_mockup(tool, template_name, data):
     """Helper function to test a single mockup generation"""
-    print(f"\nMaking API request for {test_type} test...")
+    print(f"\nMaking API request...")
     print(f"URL: {tool._base_url}/renders")
     print(f"Headers: {tool._get_headers()}")
     print(f"Request Data: {data}")
@@ -186,7 +155,7 @@ def test_mockup(tool, template_name, data, test_type):
             print(f"✗ Download failed with status code: {mockup_response.status_code}")
             return
             
-        output_path = tool._output_dir / f"mockup_{template_name}_{test_type}.png"
+        output_path = tool._output_dir / f"mockup_{template_name}.png"
         with open(output_path, "wb") as f:
             f.write(mockup_response.content)
         
@@ -202,4 +171,7 @@ if __name__ == "__main__":
     
     # Run tests
     stability_image_info = test_stability_ai()
-    test_dynamic_mockup(stability_image_info) 
+    if stability_image_info:
+        test_dynamic_mockup(stability_image_info)
+    else:
+        print("\n✗ Skipping Dynamic Mockups test due to Stability AI failure") 
