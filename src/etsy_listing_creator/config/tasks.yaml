@@ -1,0 +1,59 @@
+generate_concept:
+  description: >
+    Generate a unique and marketable digital art concept based on current trends
+    and Etsy marketplace analysis. Consider seasonal trends, popular styles,
+    and potential customer needs.
+  expected_output: >
+    A detailed description of the art concept, including style, theme,
+    target audience, and potential variations.
+  agent: idea_generator
+
+create_prompt:
+  description: >
+    Transform the art concept into a detailed prompt for Stability AI,
+    optimizing for the best possible output. Include specific details about
+    style, composition, colors, and technical requirements.
+  expected_output: >
+    A well-structured prompt that will generate high-quality AI art matching
+    the concept.
+  agent: prompt_engineer
+
+generate_image:
+  description: >
+    Use Stability AI to generate the artwork based on the provided prompt.
+    Ensure the output meets quality standards and matches the concept.
+  expected_output: >
+    A high-quality digital art piece in the required format and resolution.
+  agent: image_generator
+
+research_seo:
+  description: >
+    Conduct keyword research to identify the most effective tags, title,
+    and description for the Etsy listing. Analyze competition and search volume.
+  expected_output: >
+    A list of optimized keywords, suggested title, and SEO-friendly description.
+  agent: seo_researcher
+
+process_image:
+  description: >
+    Process the generated image to meet print quality standards. Adjust DPI,
+    color profile, and ensure proper file format and size.
+  expected_output: >
+    Print-ready image files in multiple sizes and formats.
+  agent: image_processor
+
+create_mockups:
+  description: >
+    Generate professional product mockups showing the artwork in various
+    contexts (frames, room settings, etc.).
+  expected_output: >
+    A set of high-quality mockup images for the Etsy listing.
+  agent: mockup_generator
+
+create_listing:
+  description: >
+    Compile all generated content into a complete Etsy listing, including
+    optimized title, description, tags, pricing, and all necessary images.
+  expected_output: >
+    A complete, ready-to-publish Etsy listing with all required elements.
+  agent: listing_creator
