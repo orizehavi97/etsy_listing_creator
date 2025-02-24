@@ -1,59 +1,96 @@
 generate_concept:
   description: >
-    Generate a unique and marketable digital art concept based on current trends
-    and Etsy marketplace analysis. Consider seasonal trends, popular styles,
-    and potential customer needs.
+    Generate a unique, innovative, and marketable digital art concept that aligns with current Etsy marketplace trends.
+    Consider seasonal influences, popular artistic styles, customer demographics, and emerging visual themes.
+    Your output should include a detailed breakdown of the concept with explicit elements such as:
+      - Suggested color palettes and stylistic references.
+      - Narrative or thematic elements that resonate with a specific target audience.
+      - Potential variations to adapt the concept for different customer segments.
+    Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", and "variations".
   expected_output: >
-    A detailed description of the art concept, including style, theme,
-    target audience, and potential variations.
+    A comprehensive JSON-formatted description of the art concept including detailed keys for style, theme, target_audience, and variations,
+    alongside a brief narrative explanation of the concept.
   agent: idea_generator
 
 create_prompt:
   description: >
-    Transform the art concept into a detailed prompt for Stability AI,
-    optimizing for the best possible output. Include specific details about
-    style, composition, colors, and technical requirements.
+    Transform the previously generated art concept into a highly detailed, conscience and structured prompt optimized for Stability AI.
+    The prompt should include:
+      - Explicit artistic style descriptors (e.g., hyper-realistic, digital watercolor, minimalist).
+      - Detailed composition instructions (e.g., focal points, background elements, lighting, and color gradients).
+      - Technical parameters including resolution (3000x2400 pixels) and DPI (300 DPI).
+      - Placeholders to incorporate specific stylistic guidelines from the concept output.
+    Ensure the prompt is clear and precise to maximize the quality of the generated image.
   expected_output: >
-    A well-structured prompt that will generate high-quality AI art matching
-    the concept.
+    A well-structured, two sentences, text prompt that includes all technical and stylistic details required for high-quality image generation,
+    formatted in plain text and ready for direct input into Stability AI.
   agent: prompt_engineer
 
 generate_image:
   description: >
-    Use Stability AI to generate the artwork based on the provided prompt.
-    Ensure the output meets quality standards and matches the concept.
+    Utilize Stability AI to generate a high-quality digital art image based on the detailed prompt.
+    Include instructions for fallback regeneration if the output does not meet quality standards.
   expected_output: >
-    A high-quality digital art piece in the required format and resolution.
+    A high-quality image that satisfies the technical and aesthetic requirements,
+    accompanied by a log detailing generation parameters and any quality assessments.
   agent: image_generator
 
 research_seo:
   description: >
-    Conduct keyword research to identify the most effective tags, title,
-    and description for the Etsy listing. Analyze competition and search volume.
+    Perform comprehensive keyword research and competitive analysis to optimize the Etsy listing.
+    The output should include:
+      - A ranked list of effective keywords based on search volume and relevancy.
+      - A suggested title that integrates high-impact keywords.
+      - A detailed, SEO-friendly description tailored to attract the target audience.
+    Provide a brief rationale for each recommendation to demonstrate the analysis process.
   expected_output: >
-    A list of optimized keywords, suggested title, and SEO-friendly description.
+    A JSON structure containing:
+      - "keywords": [array of optimized keywords],
+      - "title": optimized title string,
+      - "description": SEO-enhanced listing description.
   agent: seo_researcher
 
 process_image:
   description: >
-    Process the generated image to meet print quality standards. Adjust DPI,
-    color profile, and ensure proper file format and size.
+    Process the generated image to create multiple print-ready versions in standard sizes.
+    Steps include:
+      - Automatically generating 5 standard print sizes (4x6", 5x7", 8x10", 11x14", 16x20").
+      - Maintaining aspect ratio while upscaling to each target dimension.
+      - Ensuring 300 DPI resolution for all sizes.
+      - Applying HDR and sharpness enhancements for optimal print quality.
+      - Verifying image quality and dimensions for each size.
+    Each size will be processed with professional print standards and saved with a clear size indicator in the filename.
   expected_output: >
-    Print-ready image files in multiple sizes and formats.
+    A list of paths to the processed image files, one for each standard print size (4x6" to 16x20"),
+    with verification of quality metrics and proper naming convention.
   agent: image_processor
 
 create_mockups:
   description: >
-    Generate professional product mockups showing the artwork in various
-    contexts (frames, room settings, etc.).
+    Generate high-fidelity product mockups that showcase the digital art in realistic, marketable contexts.
+    The process should:
+      - Dynamically overlay the generated art onto various scenes (e.g., framed on a wall, within a styled room setting).
+      - Utilize AI (e.g., DALL·E or similar) or pre-defined templates to ensure realistic representation.
+      - Include detailed instructions for positioning, perspective, and environmental lighting to enhance realism.
   expected_output: >
-    A set of high-quality mockup images for the Etsy listing.
+    A set of high-resolution mockup images accompanied by metadata in JSON format,
+    detailing the context (e.g., indoor, outdoor, framed, unframed) and any applied transformations.
   agent: mockup_generator
 
 create_listing:
   description: >
-    Compile all generated content into a complete Etsy listing, including
-    optimized title, description, tags, pricing, and all necessary images.
+    Compile all generated content into a complete and ready-to-publish Etsy listing.
+    The listing should include:
+      - The optimized title, description, and tags from the SEO research.
+      - All relevant images (printable PNG, PDF, and mockups) with their associated metadata.
+      - Pricing suggestions if applicable, and any additional details needed for Etsy's platform.
+    The final output should be a structured JSON object suitable for direct integration with the Etsy API.
   expected_output: >
-    A complete, ready-to-publish Etsy listing with all required elements.
+    A comprehensive JSON object containing:
+      - "title": optimized title,
+      - "description": detailed listing description,
+      - "tags": array of SEO-friendly tags,
+      - "pricing": pricing details (if applicable),
+      - "assets": { "printable": file links, "pdf": file links, "mockups": file links },
+      - "metadata": additional details for listing optimization.
   agent: listing_creator

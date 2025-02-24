@@ -30,7 +30,7 @@ class EtsyListingCreator:
             "image_generator": [StabilityAITool()],
             "image_processor": [ClaidImageTool()],
             "mockup_generator": [DynamicMockupTool()],
-            "seo_researcher": [SemrushTool()],
+            #"seo_researcher": [SemrushTool()],
         }
 
         for agent_id, config in agents_config.items():

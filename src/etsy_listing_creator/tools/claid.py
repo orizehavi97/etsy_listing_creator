@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import requests
 from PIL import Image
@@ -13,7 +13,7 @@ class ClaidImageTool(BaseTool):
     description: str = """
     Process images to meet print quality standards using Claid.ai API.
     Input should be a path to an image file.
-    Returns the path to the processed image file.
+    Returns a list of paths to the processed image files in different sizes.
     """
 
     # Private attributes using Pydantic's PrivateAttr
@@ -21,6 +21,15 @@ class ClaidImageTool(BaseTool):
     _imgbb_key: str = PrivateAttr()
     _output_dir: Path = PrivateAttr()
     _base_url: str = PrivateAttr(default="https://api.claid.ai")
+    
+    # Standard print sizes in inches at 300 DPI
+    _print_sizes: Dict[str, Dict[str, int]] = PrivateAttr(default={
+        "4x6": {"width": 1200, "height": 1800},     # 4x6 inches at 300 DPI
+        "5x7": {"width": 1500, "height": 2100},     # 5x7 inches at 300 DPI
+        "8x10": {"width": 2400, "height": 3000},    # 8x10 inches at 300 DPI
+        "11x14": {"width": 3300, "height": 4200},   # 11x14 inches at 300 DPI
+        "16x20": {"width": 4800, "height": 6000},   # 16x20 inches at 300 DPI
+    })
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -135,51 +144,81 @@ class ClaidImageTool(BaseTool):
             print(f"Error details: {str(e)}")
             raise RuntimeError(f"API request failed: {str(e)}")
 
-    def _run(self, image_path: str) -> str:
+    def _run(self, image_path: str) -> List[str]:
         """
-        Process an image using Claid.ai API with default settings.
+        Process an image using Claid.ai API with multiple size outputs.
         
         Args:
             image_path: Path to the input image file
             
         Returns:
-            Path to the processed image file
+            List of paths to the processed image files
         """
-        # Get original image dimensions
+        processed_paths = []
+        
+        # Get original image dimensions and aspect ratio
         with Image.open(image_path) as img:
-            width, height = img.size
-            # Calculate target dimensions (maintaining aspect ratio)
-            target_width = 2048  # Standard high-quality width
-            target_height = int((target_width / width) * height)
+            orig_width, orig_height = img.size
+            aspect_ratio = orig_width / orig_height
 
-        # Prepare the default processing data
-        data = {
-            "operations": {
-                "resizing": {
-                    "fit": "bounds",
-                    "width": target_width,
-                    "height": target_height
-                },
-                "adjustments": {
-                    "hdr": {
-                        "intensity": 100  # Updated to match documentation
+        # Process each standard size
+        for size_name, dimensions in self._print_sizes.items():
+            print(f"\nProcessing {size_name} size...")
+            
+            # Adjust dimensions to maintain aspect ratio
+            target_width = dimensions["width"]
+            target_height = dimensions["height"]
+            
+            # Calculate dimensions that maintain original aspect ratio
+            if aspect_ratio > target_width / target_height:
+                # Width limited
+                new_width = target_width
+                new_height = int(target_width / aspect_ratio)
+            else:
+                # Height limited
+                new_height = target_height
+                new_width = int(target_height * aspect_ratio)
+
+            # Prepare the processing data
+            data = {
+                "operations": {
+                    "resizing": {
+                        "fit": "bounds",
+                        "width": new_width,
+                        "height": new_height
                     },
-                    "sharpness": 25
+                    "adjustments": {
+                        "hdr": {
+                            "intensity": 100
+                        },
+                        "sharpness": 25
+                    },
+                    "restorations": {
+                        "upscale": "smart_enhance"
+                    }
                 },
-                "restorations": {
-                    "upscale": "smart_enhance"  # Updated to match documentation
-                }
-            },
-            "output": {
-                "metadata": {
-                    "dpi": 300
-                },
-                "format": {
-                    "type": "jpeg",
-                    "quality": 85,  # Updated to match documentation
-                    "progressive": True
+                "output": {
+                    "metadata": {
+                        "dpi": 300
+                    },
+                    "format": {
+                        "type": "jpeg",
+                        "quality": 85,
+                        "progressive": True
+                    }
                 }
             }
-        }
 
-        return self._run_with_data(image_path, data, "default") 
+            # Process the image for this size
+            try:
+                processed_path = self._run_with_data(image_path, data, size_name)
+                processed_paths.append(processed_path)
+                print(f"✓ Successfully processed {size_name} size")
+            except Exception as e:
+                print(f"✗ Failed to process {size_name} size: {str(e)}")
+                continue
+
+        if not processed_paths:
+            raise RuntimeError("Failed to process any image sizes")
+
+        return processed_paths 
