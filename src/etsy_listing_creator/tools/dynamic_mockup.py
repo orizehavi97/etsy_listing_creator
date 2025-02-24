@@ -19,6 +19,7 @@ class DynamicMockupTool(BaseTool):
     _api_key: str = PrivateAttr()
     _output_dir: Path = PrivateAttr()
     _base_url: str = PrivateAttr(default="https://app.dynamicmockups.com/api/v1")
+    # mockups templates
     _templates: Dict[str, Dict[str, str]] = PrivateAttr(default={
         "frame-mockup": {
             "mockup_uuid": "88ad0ec7-4b34-4be4-a762-154d64229d07",

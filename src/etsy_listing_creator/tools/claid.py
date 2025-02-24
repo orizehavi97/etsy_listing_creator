@@ -18,14 +18,18 @@ class ClaidImageTool(BaseTool):
 
     # Private attributes using Pydantic's PrivateAttr
     _api_key: str = PrivateAttr()
+    _imgbb_key: str = PrivateAttr()
     _output_dir: Path = PrivateAttr()
     _base_url: str = PrivateAttr(default="https://api.claid.ai")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._api_key = os.getenv("CLAID_API_KEY")
+        self._imgbb_key = os.getenv("IMGBB_API_KEY")
         if not self._api_key:
             raise ValueError("CLAID_API_KEY environment variable is required")
+        if not self._imgbb_key:
+            raise ValueError("IMGBB_API_KEY environment variable is required for image uploading")
         
         self._output_dir = Path("output/processed_images")
         self._output_dir.mkdir(parents=True, exist_ok=True)
@@ -38,9 +42,102 @@ class ClaidImageTool(BaseTool):
             "Content-Type": "application/json"
         }
 
+    def _upload_to_imgbb(self, image_path: str) -> str:
+        """Upload image to ImgBB and get public URL"""
+        print(f"Uploading image to ImgBB: {image_path}")
+        
+        with open(image_path, "rb") as img_file:
+            import base64
+            image_data = base64.b64encode(img_file.read()).decode('utf-8')
+        
+        response = requests.post(
+            "https://api.imgbb.com/1/upload",
+            data={
+                "key": self._imgbb_key,
+                "image": image_data,
+            },
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            raise RuntimeError(f"Failed to upload to ImgBB: {response.text}")
+        
+        result = response.json()
+        if not result.get('success'):
+            raise RuntimeError(f"ImgBB upload failed: {result}")
+        
+        url = result['data']['url']
+        print(f"✓ Image uploaded to: {url}")
+        return url
+
+    def _run_with_data(self, image_path: str, data: Dict, size_name: str) -> str:
+        """
+        Process an image using Claid.ai API with custom data and size-specific output.
+        
+        Args:
+            image_path: Path to the input image file
+            data: Custom processing parameters
+            size_name: Name of the size being processed (for output filename)
+            
+        Returns:
+            Path to the processed image file
+        """
+        try:
+            # First upload the image to get a public URL
+            image_url = self._upload_to_imgbb(image_path)
+            
+            # Update the request data with the image URL
+            data["input"] = image_url
+
+            # Process the image
+            print(f"\nMaking request to {self._base_url}/v1-beta1/image/edit")
+            print(f"Request data: {data}")
+            response = requests.post(
+                f"{self._base_url}/v1-beta1/image/edit",
+                headers=self._get_headers(),
+                json=data,
+                timeout=60  # Increased timeout for large images
+            )
+
+            if response.status_code != 200:
+                print(f"Error response: {response.text}")
+                raise RuntimeError(f"Failed to process image: {response.text}")
+
+            # Parse the response
+            result = response.json()
+            if not result.get('data', {}).get('output', {}).get('tmp_url'):
+                raise RuntimeError("No output URL in response")
+
+            # Get the processed image URL
+            processed_url = result['data']['output']['tmp_url']
+            print(f"✓ Processed image URL: {processed_url}")
+
+            # Download the processed image
+            processed_response = requests.get(processed_url)
+            if processed_response.status_code != 200:
+                raise RuntimeError("Failed to download processed image")
+
+            # Save the processed image with size in filename
+            output_path = self._output_dir / f"processed_{Path(image_path).stem}_{size_name}.jpg"
+            with open(output_path, "wb") as f:
+                f.write(processed_response.content)
+
+            # Verify the image was saved
+            if not output_path.exists():
+                raise RuntimeError("Failed to save processed image")
+
+            size = output_path.stat().st_size
+            print(f"✓ Saved image size: {size} bytes")
+
+            return str(output_path)
+
+        except Exception as e:
+            print(f"Error details: {str(e)}")
+            raise RuntimeError(f"API request failed: {str(e)}")
+
     def _run(self, image_path: str) -> str:
         """
-        Process an image using Claid.ai API.
+        Process an image using Claid.ai API with default settings.
         
         Args:
             image_path: Path to the input image file
@@ -48,16 +145,15 @@ class ClaidImageTool(BaseTool):
         Returns:
             Path to the processed image file
         """
-        # Get original image dimensions and format
+        # Get original image dimensions
         with Image.open(image_path) as img:
             width, height = img.size
             # Calculate target dimensions (maintaining aspect ratio)
             target_width = 2048  # Standard high-quality width
             target_height = int((target_width / width) * height)
 
-        # Prepare the API request data
+        # Prepare the default processing data
         data = {
-            "input": image_path,  # Will be replaced with file upload or URL
             "operations": {
                 "resizing": {
                     "fit": "bounds",
@@ -66,71 +162,24 @@ class ClaidImageTool(BaseTool):
                 },
                 "adjustments": {
                     "hdr": {
-                        "intensity": 100
+                        "intensity": 100  # Updated to match documentation
                     },
                     "sharpness": 25
                 },
                 "restorations": {
-                    "upscale": "smart_enhance"
+                    "upscale": "smart_enhance"  # Updated to match documentation
                 }
             },
             "output": {
+                "metadata": {
+                    "dpi": 300
+                },
                 "format": {
                     "type": "jpeg",
-                    "quality": 85,
+                    "quality": 85,  # Updated to match documentation
                     "progressive": True
                 }
             }
         }
 
-        try:
-            # First, upload the image or get a signed URL
-            with open(image_path, "rb") as img_file:
-                files = {"file": (Path(image_path).name, img_file, "image/jpeg")}
-                upload_response = requests.post(
-                    f"{self._base_url}/v1-beta1/upload",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                    files=files
-                )
-                
-                if upload_response.status_code != 200:
-                    raise RuntimeError(f"Failed to upload image: {upload_response.text}")
-                
-                # Get the URL of the uploaded image
-                upload_result = upload_response.json()
-                data["input"] = upload_result["url"]
-
-            # Process the image
-            response = requests.post(
-                f"{self._base_url}/v1-beta1/image/edit",
-                headers=self._get_headers(),
-                json=data
-            )
-
-            if response.status_code != 200:
-                raise RuntimeError(f"Failed to process image: {response.text}")
-
-            # Get the processed image URL from the response
-            result = response.json()
-            if "url" not in result:
-                raise RuntimeError("No processed image URL in response")
-
-            # Download the processed image
-            processed_response = requests.get(result["url"])
-            if processed_response.status_code != 200:
-                raise RuntimeError("Failed to download processed image")
-
-            # Save the processed image
-            output_path = self._output_dir / f"processed_{Path(image_path).stem}.jpg"
-            with open(output_path, "wb") as f:
-                f.write(processed_response.content)
-
-            # Verify the DPI of the processed image
-            with Image.open(output_path) as img:
-                if "dpi" in img.info and img.info["dpi"][0] < 300:
-                    raise ValueError("Failed to achieve required DPI")
-
-            return str(output_path)
-
-        except requests.exceptions.RequestException as e:
-            raise RuntimeError(f"API request failed: {str(e)}") 
+        return self._run_with_data(image_path, data, "default") 

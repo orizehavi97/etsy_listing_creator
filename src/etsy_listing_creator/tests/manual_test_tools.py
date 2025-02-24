@@ -6,6 +6,7 @@ import requests
 
 from src.etsy_listing_creator.tools.dynamic_mockup import DynamicMockupTool
 from src.etsy_listing_creator.tools.stability_ai import StabilityAITool
+from src.etsy_listing_creator.tools.claid import ClaidImageTool
 
 def test_stability_ai():
     """Test StabilityAI tool with real API calls"""
@@ -53,6 +54,94 @@ def test_stability_ai():
     except Exception as e:
         print(f"\n✗ Error: {str(e)}")
         return None, None
+
+def test_claid(image_path: str):
+    """Test Claid image processing tool to create print-ready images in multiple sizes"""
+    print("\n=== Testing Claid Image Processing ===")
+    
+    # Define standard print sizes (width x height in pixels at 300 DPI)
+    PRINT_SIZES = {
+        "4x6": (1200, 1800),    # 4x6 inches at 300 DPI
+        "5x7": (1500, 2100),    # 5x7 inches at 300 DPI
+        "8x10": (2400, 3000),   # 8x10 inches at 300 DPI
+        "11x14": (3300, 4200),  # 11x14 inches at 300 DPI
+        "16x20": (4800, 6000)   # 16x20 inches at 300 DPI
+    }
+    
+    try:
+        # Initialize the tool
+        print("Initializing tool...")
+        tool = ClaidImageTool()
+        print("✓ Tool initialized successfully")
+        
+        # Test API key
+        print("\nTesting API key...")
+        api_key = os.getenv("CLAID_API_KEY")
+        if not api_key:
+            raise ValueError("CLAID_API_KEY not found in environment variables. Please add it to your .env file.")
+        print(f"✓ API key found: {api_key[:10]}...")
+        
+        processed_paths = {}
+        
+        # Process the image in each size
+        print("\nProcessing image in multiple sizes...")
+        for size_name, (width, height) in PRINT_SIZES.items():
+            print(f"\nProcessing {size_name} size ({width}x{height} pixels)...")
+            
+            # Prepare request data for print-ready output
+            data = {
+                "input": image_path,
+                "operations": {
+                    "resizing": {
+                        "fit": "bounds",
+                        "width": width,
+                        "height": height
+                    },
+                    "adjustments": {
+                        "hdr": {
+                            "intensity": 20  # Subtle enhancement for art prints
+                        },
+                        "sharpness": 25
+                    },
+                    "restorations": {
+                        "upscale": "photo"  # Best for high-quality art upscaling
+                    }
+                },
+                "output": {
+                    "metadata": {
+                        "dpi": 300  # Print-ready DPI
+                    },
+                    "format": {
+                        "type": "jpeg",
+                        "quality": 95,  # High quality for printing
+                        "progressive": True
+                    }
+                }
+            }
+            
+            try:
+                processed_path = tool._run_with_data(image_path, data, size_name)
+                if processed_path:
+                    processed_paths[size_name] = processed_path
+                    size = Path(processed_path).stat().st_size
+                    print(f"✓ {size_name} processed and saved to: {processed_path} ({size} bytes)")
+                else:
+                    print(f"✗ Failed to process {size_name} size")
+            except Exception as e:
+                print(f"✗ Error processing {size_name} size: {str(e)}")
+                continue
+        
+        # Return results
+        if processed_paths:
+            print(f"\n✓ Successfully processed {len(processed_paths)} sizes")
+            return processed_paths
+        else:
+            print("\n✗ Failed to process any sizes")
+            return None
+        
+    except Exception as e:
+        print(f"\n✗ Error: {str(e)}")
+        return None
 
 def test_dynamic_mockup(stability_image_info):
     """Test Dynamic Mockups tool with real API calls"""
@@ -170,8 +259,26 @@ if __name__ == "__main__":
     load_dotenv()
     
     # Run tests
+    print("\n=== Starting Test Suite ===")
+    
+    # Step 1: Generate image with Stability AI
     stability_image_info = test_stability_ai()
-    if stability_image_info:
-        test_dynamic_mockup(stability_image_info)
+    if not stability_image_info:
+        print("\n✗ Stability AI test failed. Stopping test suite.")
+        exit(1)
+    
+    local_path, public_url = stability_image_info
+    
+    # Step 2: Process image with Claid in multiple sizes
+    processed_paths = test_claid(local_path)
+    if not processed_paths:
+        print("\n⚠ Claid processing failed, but continuing with mockup generation...")
     else:
-        print("\n✗ Skipping Dynamic Mockups test due to Stability AI failure") 
+        print("\nProcessed images:")
+        for size, path in processed_paths.items():
+            print(f"- {size}: {path}")
+    
+    # Step 3: Generate mockups using original Stability AI image
+    test_dynamic_mockup(stability_image_info)
+    
+    print("\n=== Test Suite Complete ===") 
