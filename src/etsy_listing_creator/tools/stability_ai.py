@@ -22,6 +22,8 @@ class StabilityAITool(BaseTool):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # Set up the host and API key
+        os.environ['STABILITY_HOST'] = 'grpc.stability.ai:443'
         self._api_key = os.getenv("STABILITY_KEY")
         if not self._api_key:
             raise ValueError("STABILITY_KEY environment variable is required")
@@ -42,6 +44,7 @@ class StabilityAITool(BaseTool):
         # Initialize Stability client
         stability_api = client.StabilityInference(
             key=self._api_key,
+            host=os.getenv('STABILITY_HOST', 'grpc.stability.ai:443'),
             verbose=True,
         )
 
@@ -57,7 +60,7 @@ class StabilityAITool(BaseTool):
             sampler=generation.SAMPLER_K_DPMPP_2M  # Sampling method
         )
 
-        # Save the generated image
+        # Process the response
         for resp in answers:
             for artifact in resp.artifacts:
                 if artifact.finish_reason == generation.FILTER:
