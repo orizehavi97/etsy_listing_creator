@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Dict, Any
+import json
 
 import yaml
 from crewai import Agent, Task, Crew
@@ -11,6 +12,7 @@ from .tools import (
     ClaidImageTool,
     DynamicMockupTool,
     SemrushTool,
+    JsonSaveTool,
 )
 
 
@@ -33,6 +35,7 @@ class EtsyListingCreator:
             # "image_processor": [ClaidImageTool()],
             "mockup_generator": [DynamicMockupTool()],
             # "seo_researcher": [SemrushTool()],
+            "listing_creator": [JsonSaveTool()],
         }
 
         for agent_id, config in agents_config.items():
@@ -100,6 +103,19 @@ class EtsyListingCreator:
             )
 
         result = crew.kickoff()
+
+        # Check if the result contains a path to the JSON file
+        if isinstance(result, str) and "output/listing.json" in result:
+            print(f"Listing saved to: {result}")
+
+            # Optionally, load and return the JSON data
+            try:
+                with open(result, "r", encoding="utf-8") as f:
+                    json_data = json.load(f)
+                return json_data
+            except Exception as e:
+                print(f"Warning: Could not load the saved JSON file: {str(e)}")
+
         return result
 
 

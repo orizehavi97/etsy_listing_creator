@@ -87,6 +87,10 @@ create_listing:
       - All relevant images (printable PNG, PDF, and mockups) with their associated metadata.
       - Pricing suggestions if applicable, and any additional details needed for Etsy's platform.
     The final output should be a structured JSON object suitable for direct integration with the Etsy API.
+    IMPORTANT: Save the complete listing information as a JSON file named "listing.json" in the output directory.
+    To save the JSON data, use the JSON Save Tool with the following format:
+      - Pass the listing data directly as a dictionary (not as a string)
+      - Use "listing.json" as the filename (do not include "output/" in the filename)
   expected_output: >
     A comprehensive JSON object containing:
       - "title": optimized title,
@@ -95,4 +99,5 @@ create_listing:
       - "pricing": pricing details (if applicable),
       - "assets": { "printable": file links, "pdf": file links, "mockups": file links },
       - "metadata": additional details for listing optimization.
+    The JSON should be saved to "output/listing.json" and the path to this file should be included in the response.
   agent: listing_creator
