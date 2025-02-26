@@ -13,6 +13,7 @@ from .tools import (
     SemrushTool,
 )
 
+
 class EtsyListingCreator:
     def __init__(self):
         load_dotenv()
@@ -28,9 +29,10 @@ class EtsyListingCreator:
         agents = {}
         tools = {
             "image_generator": [StabilityAITool()],
-            "image_processor": [ClaidImageTool()],
+            # Temporarily disabled for development
+            # "image_processor": [ClaidImageTool()],
             "mockup_generator": [DynamicMockupTool()],
-            #"seo_researcher": [SemrushTool()],
+            # "seo_researcher": [SemrushTool()],
         }
 
         for agent_id, config in agents_config.items():
@@ -39,9 +41,9 @@ class EtsyListingCreator:
                 goal=config["goal"],
                 backstory=config["backstory"],
                 tools=tools.get(agent_id, []),
-                verbose=True
+                verbose=True,
             )
-        
+
         return agents
 
     def _load_tasks(self) -> Dict[str, Task]:
@@ -56,7 +58,31 @@ class EtsyListingCreator:
                 expected_output=config["expected_output"],
                 agent=self.agents[config["agent"]],
             )
-        
+
+        # Set up task dependencies to ensure proper data flow
+        # The mockup generator should use the output from the image generator
+        if "create_mockups" in tasks and "generate_image" in tasks:
+            tasks["create_mockups"].context = [tasks["generate_image"]]
+
+        # If image processor is enabled, it should use the output from the image generator
+        if "process_image" in tasks and "generate_image" in tasks:
+            tasks["process_image"].context = [tasks["generate_image"]]
+
+        # The listing creator should use outputs from all previous tasks
+        if "create_listing" in tasks:
+            context_tasks = []
+            for task_id in [
+                "generate_concept",
+                "create_prompt",
+                "generate_image",
+                "research_seo",
+                "process_image",
+                "create_mockups",
+            ]:
+                if task_id in tasks:
+                    context_tasks.append(tasks[task_id])
+            tasks["create_listing"].context = context_tasks
+
         return tasks
 
     def create_listing(self, concept: str = None) -> Dict[str, Any]:
@@ -64,17 +90,20 @@ class EtsyListingCreator:
         crew = Crew(
             agents=list(self.agents.values()),
             tasks=list(self.tasks.values()),
-            verbose=True
+            verbose=True,
         )
 
         # If no concept is provided, the idea_generator will create one
         if concept:
-            self.tasks["generate_concept"].context = f"Use this concept as a starting point: {concept}"
+            self.tasks["generate_concept"].context = (
+                f"Use this concept as a starting point: {concept}"
+            )
 
         result = crew.kickoff()
         return result
 
+
 if __name__ == "__main__":
     creator = EtsyListingCreator()
     result = creator.create_listing()
-    print("Listing created successfully!") 
+    print("Listing created successfully!")
