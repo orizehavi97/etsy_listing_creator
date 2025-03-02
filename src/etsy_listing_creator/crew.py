@@ -13,6 +13,7 @@ from .tools import (
     DynamicMockupTool,
     SemrushTool,
     JsonSaveTool,
+    PrintPreparationTool,
 )
 
 
@@ -20,6 +21,14 @@ class EtsyListingCreator:
     def __init__(self):
         load_dotenv()
         self.config_dir = Path(__file__).parent / "config"
+        self.config = {}
+
+        # Try to load config.yaml if it exists
+        config_path = self.config_dir / "config.yaml"
+        if config_path.exists():
+            with open(config_path, "r") as f:
+                self.config = yaml.safe_load(f)
+
         self.agents = self._load_agents()
         self.tasks = self._load_tasks()
 
@@ -31,8 +40,8 @@ class EtsyListingCreator:
         agents = {}
         tools = {
             "image_generator": [StabilityAITool()],
-            # Temporarily disabled for development
-            # "image_processor": [ClaidImageTool()],
+            # Always use local processing with PrintPreparationTool instead of Claid.ai API
+            "image_processor": [ClaidImageTool(use_local_processing=True)],
             "mockup_generator": [DynamicMockupTool()],
             # "seo_researcher": [SemrushTool()],
             "listing_creator": [JsonSaveTool()],

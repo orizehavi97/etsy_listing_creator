@@ -6,4 +6,8 @@ python-dotenv>=1.0.0
 pyyaml>=6.0.1
 stability-sdk>=0.8.3
 pillow>=10.0.0  # For image processing
-python-slugify>=8.0.1  # For generating URL-friendly strings 
+python-slugify>=8.0.1  # For generating URL-friendly strings
+opencv-python>=4.8.0  # For image processing with Real-ESRGAN
+numpy>=1.24.0  # Required for image processing
+# Optional: Install Real-ESRGAN if you want to use it directly
+# real-esrgan>=0.3.0 
