@@ -319,6 +319,12 @@ class PrintPreparationTool:
                 # Crop the image
                 image_copy = image_copy.crop(crop_box)
 
+            # Ensure the image exactly matches the canvas dimensions
+            if image_copy.width != canvas.width or image_copy.height != canvas.height:
+                image_copy = image_copy.resize(
+                    (canvas.width, canvas.height), Image.LANCZOS
+                )
+
             # Paste the resized and cropped image onto the canvas
             result.paste(image_copy, (0, 0))
         else:

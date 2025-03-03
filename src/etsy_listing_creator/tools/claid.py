@@ -202,11 +202,12 @@ class ClaidImageTool(BaseTool):
         if self._use_local_processing:
             # Use local processing with PrintPreparationTool
             print(f"Using local processing for size: {size_name}")
+            # Always use fill_canvas=True when using local processing to avoid white edges
             return self._print_prep_tool.prepare_image_for_print(
                 image_path,
                 size_name,
                 f"claid_processed_{Path(image_path).stem}_{size_name.replace('x', '_')}.png",
-                fill_canvas=fill_canvas,
+                fill_canvas=True,
             )
 
         # Create a temporary copy to avoid permission issues
@@ -295,8 +296,14 @@ class ClaidImageTool(BaseTool):
         output_paths = []
         for size_name in self._print_sizes.keys():
             try:
+                # Always use fill_canvas=True when using local processing to avoid white edges
+                actual_fill_canvas = True if self._use_local_processing else fill_canvas
+
                 output_path = self._run_with_data(
-                    image_path, default_params, size_name, fill_canvas=fill_canvas
+                    image_path,
+                    default_params,
+                    size_name,
+                    fill_canvas=actual_fill_canvas,
                 )
                 output_paths.append(output_path)
             except Exception as e:
