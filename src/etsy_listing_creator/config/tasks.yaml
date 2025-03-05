@@ -1,6 +1,6 @@
 generate_concept:
   description: >
-    Generate a unique, innovative, and marketable digital art concept that aligns with current Etsy marketplace trends.
+    Generate a unique, innovative, and marketable digital art concept.
     Consider seasonal influences, popular artistic styles, customer demographics, and emerging visual themes.
     Your output should include a detailed breakdown of the concept with explicit elements such as:
       - Suggested color palettes and stylistic references.
@@ -14,15 +14,14 @@ generate_concept:
 
 create_prompt:
   description: >
-    Transform the previously generated art concept into a highly detailed, conscience and structured prompt optimized for Stability AI.
-    The prompt should include:
-      - Explicit artistic style descriptors (e.g., hyper-realistic, digital watercolor, minimalist).
-      - Detailed composition instructions (e.g., focal points, background elements, lighting, and color gradients).
-      - Technical parameters including resolution (3000x2400 pixels) and DPI (300 DPI).
-      - Placeholders to incorporate specific stylistic guidelines from the concept output.
-    Ensure the prompt is clear and precise to maximize the quality of the generated image.
+    Transform the previous art concept into a highly detailed, structured prompt for Stability AI’s Flux model: 
+    Details: [Brief, vivid description of key elements of the concept]
+    Style: hyper-realistic, digital watercolor, minimalist (choose one or combine as needed)
+    Use concise, comma-separated phrases for optimal T5/CLIP parsing. 
+    Stick to indigo blue and honey orange colors theme since it's our shops niche
+    Make sure to include "Style of TOK, indigo blue and honey orange colors" at the end of the prompt
   expected_output: >
-    A well-structured, two sentences, text prompt that includes all technical and stylistic details required for high-quality image generation,
+    A well-structured, one sentence text prompt that includes all technical and stylistic details required for high-quality image generation,
     formatted in plain text and ready for direct input into Stability AI.
   agent: prompt_engineer
 
