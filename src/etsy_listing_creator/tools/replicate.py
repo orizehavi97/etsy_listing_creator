@@ -1,18 +1,17 @@
 import os
-import stat
-import time
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
-
-import replicate
+from typing import List, Dict, Any, Optional
+import time
+import stat
 import requests
-from pydantic import Field, PrivateAttr
-import base64
 
+from pydantic import Field, PrivateAttr
 from crewai.tools import BaseTool
 
+import replicate
 
-class ReplicateImageTool(BaseTool):
+
+class ReplicateTool(BaseTool):
     name: str = "Replicate Image Generator"
     description: str = """
     Generate high-quality images using Replicate's API.
@@ -43,70 +42,129 @@ class ReplicateImageTool(BaseTool):
         }
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, model_id: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
-        # Set up API key
+        # Set up the API key
         self._api_key = os.getenv("REPLICATE_API_TOKEN")
         if not self._api_key:
             raise ValueError("REPLICATE_API_TOKEN environment variable is required")
 
-        # Set the API token for the replicate library
-        os.environ["REPLICATE_API_TOKEN"] = self._api_key
+        # Set the model ID if provided
+        if model_id:
+            self._model_id = model_id
 
         # Set up output directory
         self._output_dir = Path("output/images")
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
-    def _run(self, prompt: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def _run(self, prompt: str) -> str:
         """
         Generate an image using Replicate.
 
         Args:
             prompt: Detailed description of the desired image
-            params: Optional parameters to override the defaults
 
         Returns:
             Path to the generated image file
         """
         print(f"Generating image with prompt: {prompt}")
 
-        # Prepare input parameters
+        # Prepare the input parameters
         input_params = self._default_params.copy()
-        if params:
-            input_params.update(params)
-
-        # Add the prompt to the input parameters
         input_params["prompt"] = prompt
 
         try:
-            # Run the model
-            print(f"Running Replicate model: {self._model_id}")
-            print(f"Input parameters: {input_params}")
-
+            # Generate the image
+            print(f"Calling Replicate API with model: {self._model_id}")
             output = replicate.run(self._model_id, input=input_params)
 
-            print(f"Replicate output: {output}")
+            # The output can be a list of URLs, a string URL, or a FileOutput object
+            print(f"Output type: {type(output)}")
+            print(f"Output content: {output}")
 
-            # The output is typically a list of image URLs
-            if not output or not isinstance(output, list) or len(output) == 0:
+            # Handle different output types
+            if isinstance(output, list) and len(output) > 0:
+                image_url = output[0]
+                print(f"Image generated successfully. URL from list: {image_url}")
+                return self._download_image(image_url)
+            elif isinstance(output, str) and (
+                output.startswith("http://") or output.startswith("https://")
+            ):
+                # If it's a direct URL string
+                print(f"Image generated successfully. Direct URL: {output}")
+                return self._download_image(output)
+            elif hasattr(output, "url"):
+                # If it's a FileOutput object with a url attribute
+                image_url = output.url
+                print(f"Image generated successfully. URL from object: {image_url}")
+                return self._download_image(image_url)
+            elif hasattr(output, "download"):
+                # If it's a FileOutput object with a download method
+                print("Output has download method, using it directly")
+                # Generate a unique filename with timestamp
+                timestamp = int(time.time())
+                img_path = self._output_dir / f"replicate_generated_{timestamp}.webp"
+
+                # Download the file directly
+                output.download(str(img_path))
+
+                # Set file permissions to ensure it's readable and writable
+                os.chmod(
+                    img_path,
+                    stat.S_IRUSR
+                    | stat.S_IWUSR
+                    | stat.S_IRGRP
+                    | stat.S_IWGRP
+                    | stat.S_IROTH
+                    | stat.S_IWOTH,
+                )
+
+                print(f"✓ Image downloaded and saved to: {img_path}")
+                return str(img_path)
+            else:
                 raise ValueError(f"Unexpected output format from Replicate: {output}")
 
-            # Download the first image
-            image_url = output[0]
-            print(f"Downloading image from: {image_url}")
+        except Exception as e:
+            print(f"Error generating image: {str(e)}")
+            raise RuntimeError(f"Failed to generate image: {str(e)}")
 
+    def _download_image(self, image_url: str) -> str:
+        """
+        Download an image from a URL and save it locally.
+
+        Args:
+            image_url: URL of the image to download
+
+        Returns:
+            Path to the downloaded image file
+        """
+        try:
             # Generate a unique filename with timestamp
             timestamp = int(time.time())
+
+            # Try to extract file extension from URL
+            try:
+                file_extension = image_url.split(".")[-1]
+                if "?" in file_extension:  # Handle URLs with query parameters
+                    file_extension = file_extension.split("?")[0]
+                if not file_extension or len(file_extension) > 5:
+                    file_extension = (
+                        "webp"  # Default to webp if extension can't be determined
+                    )
+            except (AttributeError, IndexError):
+                # If URL doesn't have a proper extension or isn't a string
+                file_extension = "webp"
+
             img_path = (
-                self._output_dir
-                / f"replicate_generated_{timestamp}.{input_params['output_format']}"
+                self._output_dir / f"replicate_generated_{timestamp}.{file_extension}"
             )
 
             # Download the image
-            response = requests.get(image_url, stream=True)
-            if response.status_code != 200:
-                raise RuntimeError(f"Failed to download image: {response.status_code}")
+            print(f"Downloading image from {image_url}")
+            response = requests.get(image_url, stream=True, timeout=30)
+            response.raise_for_status()
 
+            # Save the image
             with open(img_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
@@ -122,122 +180,74 @@ class ReplicateImageTool(BaseTool):
                 | stat.S_IWOTH,
             )
 
-            print(f"✓ Image generated and saved to: {img_path}")
+            print(f"✓ Image downloaded and saved to: {img_path}")
             return str(img_path)
 
         except Exception as e:
-            print(f"Error generating image with Replicate: {str(e)}")
-            raise RuntimeError(f"Failed to generate image: {str(e)}")
+            print(f"Error downloading image: {str(e)}")
 
-    def upload_image(self, image_path: str) -> str:
-        """
-        Upload an image to ImgBB and get a public URL.
+            # Fallback: try to save with a default name if there was an issue with the URL
+            try:
+                timestamp = int(time.time())
+                img_path = self._output_dir / f"replicate_generated_{timestamp}.webp"
 
-        Args:
-            image_path: Path to the image file to upload
+                print(f"Trying alternative download approach for: {image_url}")
+                response = requests.get(image_url, timeout=30)
+                response.raise_for_status()
 
-        Returns:
-            Public URL of the uploaded image
-        """
-        upload_url = "https://api.imgbb.com/1/upload"
+                with open(img_path, "wb") as f:
+                    f.write(response.content)
 
-        # Verify the image exists
-        if not os.path.exists(image_path):
-            raise ValueError(f"Image file not found: {image_path}")
+                os.chmod(
+                    img_path,
+                    stat.S_IRUSR
+                    | stat.S_IWUSR
+                    | stat.S_IRGRP
+                    | stat.S_IWGRP
+                    | stat.S_IROTH
+                    | stat.S_IWOTH,
+                )
 
-        imgbb_key = os.getenv("IMGBB_API_KEY")
-        if not imgbb_key:
-            raise ValueError(
-                "IMGBB_API_KEY environment variable is required for image uploading"
-            )
+                print(f"✓ Image downloaded and saved to: {img_path} (fallback method)")
+                return str(img_path)
+            except Exception as e2:
+                print(f"Error in fallback download: {str(e2)}")
+                raise RuntimeError(f"Failed to download image: {str(e)}")
 
-        try:
-            # Prepare the file for upload
-            with open(image_path, "rb") as img_file:
-                # ImgBB expects the image as base64
-                image_data = base64.b64encode(img_file.read()).decode("utf-8")
-
-            # Make the request
-            print(f"Uploading image: {image_path}")
-            response = requests.post(
-                upload_url,
-                data={
-                    "key": imgbb_key,
-                    "image": image_data,
-                },
-                timeout=30,
-            )
-
-            # Check response
-            if response.status_code != 200:
-                print(f"Upload failed with status code: {response.status_code}")
-                print(f"Response: {response.text}")
-                raise RuntimeError(f"Failed to upload image: {response.text}")
-
-            # Parse response
-            result = response.json()
-            if not result.get("success"):
-                print(f"Upload failed: {result}")
-                raise RuntimeError("Upload failed")
-
-            # Get the URL - ImgBB provides several URLs, we'll use the direct display URL
-            url = result["data"]["display_url"]
-            print(f"✓ Image uploaded successfully to: {url}")
-            return url
-
-        except Exception as e:
-            print(f"Error uploading image: {str(e)}")
-            raise RuntimeError(f"Failed to upload image: {str(e)}")
-
-    def generate_and_upload(
-        self, prompt: str, params: Optional[Dict[str, Any]] = None
-    ) -> Tuple[str, str]:
+    def generate_and_upload(self, prompt: str) -> tuple[str, str]:
         """
         Generate an image and upload it to ImgBB.
 
         Args:
             prompt: Detailed description of the desired image
-            params: Optional parameters to override the defaults
 
         Returns:
-            Tuple of (local_path, public_url)
+            Tuple of (local_path, image_url)
         """
-        # Generate the image
-        local_path = self._run(prompt, params)
+        local_path = ""
+        image_url = ""
 
-        # Upload the image
-        public_url = self.upload_image(local_path)
-
-        return local_path, public_url
-
-    def run(self, tool_input: str) -> str:
-        """
-        Run the tool with the given input.
-
-        Args:
-            tool_input: Input to the tool, can be a simple prompt or a JSON string with
-                       additional parameters
-
-        Returns:
-            Path to the generated image file
-        """
+        # Step 1: Generate the image
         try:
-            # Check if the input is a JSON string with additional parameters
-            try:
-                import json
+            local_path = self._run(prompt)
+            if not local_path or not os.path.exists(local_path):
+                print("Warning: Generated image path is invalid or file doesn't exist")
+                return "", ""
 
-                input_data = json.loads(tool_input)
-                if isinstance(input_data, dict):
-                    prompt = input_data.pop("prompt", "")
-                    if not prompt:
-                        return "Error: 'prompt' is required in the JSON input"
-
-                    return self._run(prompt, input_data)
-            except (json.JSONDecodeError, TypeError):
-                # If it's not valid JSON, treat it as a simple prompt
-                pass
-
-            # Simple prompt input
-            return self._run(tool_input)
+            print(f"Successfully generated image at: {local_path}")
         except Exception as e:
-            return f"Error: {str(e)}"
+            print(f"Error generating image: {str(e)}")
+            return "", ""
+
+        # Step 2: Upload to ImgBB
+        try:
+            from .claid import ClaidImageTool
+
+            claid_tool = ClaidImageTool(use_local_processing=True)
+            image_url = claid_tool._upload_to_imgbb(local_path)
+            print(f"✓ Image uploaded to ImgBB: {image_url}")
+        except Exception as e:
+            print(f"Warning: Failed to upload image to ImgBB: {str(e)}")
+            print("Returning local path only")
+
+        return local_path, image_url

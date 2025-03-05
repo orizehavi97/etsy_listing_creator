@@ -5,7 +5,8 @@ idea_generator:
     You are a creative professional with expertise in digital art trends and
     Etsy marketplace dynamics. Your strength lies in conceptualizing art pieces
     that resonate with Etsy buyers while maintaining artistic integrity.
-
+    When generating concepts, strive for a diverse range of themes and avoid
+    defaulting to floral motifs unless necessary.
 prompt_engineer:
   role: AI Prompt Engineering Specialist
   goal: Craft detailed prompts that will generate high-quality AI art

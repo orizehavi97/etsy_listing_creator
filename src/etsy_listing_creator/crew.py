@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from .tools import (
     # StabilityAITool,  # Temporarily disabled
-    ReplicateImageTool,
+    ReplicateTool,  # New Replicate-based image generator
     ClaidImageTool,
     DynamicMockupTool,
     SemrushTool,
@@ -41,8 +41,8 @@ class EtsyListingCreator:
         agents = {}
         tools = {
             "image_generator": [
-                ReplicateImageTool()
-            ],  # Using Replicate instead of Stability AI
+                ReplicateTool()
+            ],  # Using Replicate instead of StabilityAI
             # Always use local processing with PrintPreparationTool instead of Claid.ai API
             "image_processor": [ClaidImageTool(use_local_processing=True)],
             "mockup_generator": [DynamicMockupTool()],

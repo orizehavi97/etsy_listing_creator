@@ -1,5 +1,5 @@
 # from .stability_ai import StabilityAITool  # Temporarily disabled
-from .replicate import ReplicateImageTool
+from .replicate import ReplicateTool  # New Replicate-based image generator
 from .claid import ClaidImageTool
 from .dynamic_mockup import DynamicMockupTool
 from .semrush import SemrushTool
@@ -8,7 +8,7 @@ from .print_prep import PrintPreparationTool
 
 __all__ = [
     # "StabilityAITool",  # Temporarily disabled
-    "ReplicateImageTool",
+    "ReplicateTool",  # New Replicate-based image generator
     "ClaidImageTool",
     "DynamicMockupTool",
     "SemrushTool",

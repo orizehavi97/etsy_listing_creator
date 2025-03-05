@@ -1,11 +1,9 @@
 generate_concept:
   description: >
-    Generate a unique, innovative, and marketable digital art concept.
-    Consider seasonal influences, popular artistic styles, customer demographics, and emerging visual themes.
+    Generate a unique, innovative, eye-catching and marketable digital art concept.
     Your output should include a detailed breakdown of the concept with explicit elements such as:
-      - Suggested color palettes and stylistic references.
+      - Composition elements in short details
       - Narrative or thematic elements that resonate with a specific target audience.
-      - Potential variations to adapt the concept for different customer segments.
     Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", and "variations".
   expected_output: >
     A comprehensive JSON-formatted description of the art concept including detailed keys for style, theme, target_audience, and variations,
@@ -19,7 +17,7 @@ create_prompt:
     Style: hyper-realistic, digital watercolor, minimalist (choose one or combine as needed)
     Use concise, comma-separated phrases for optimal T5/CLIP parsing. 
     Stick to indigo blue and honey orange colors theme since it's our shops niche
-    Make sure to include "Style of TOK, indigo blue and honey orange colors" at the end of the prompt
+    Make sure to include "Style of TOK, indigo blue and honey orange colors" at the end of the prompt as plain text
   expected_output: >
     A well-structured, one sentence text prompt that includes all technical and stylistic details required for high-quality image generation,
     formatted in plain text and ready for direct input into Stability AI.
@@ -27,8 +25,9 @@ create_prompt:
 
 generate_image:
   description: >
-    Utilize Stability AI to generate a high-quality digital art image based on the detailed prompt.
+    Utilize Replicate AI to generate a high-quality digital art image based on the detailed prompt.
     Include instructions for fallback regeneration if the output does not meet quality standards.
+    Use the exact prompt from the prompt_engineer agent, do not modify it.
   expected_output: >
     A high-quality image that satisfies the technical and aesthetic requirements,
     accompanied by a log detailing generation parameters and any quality assessments.
