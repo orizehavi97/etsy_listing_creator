@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 import time
 import stat
 import requests
+import json
 
 from pydantic import Field, PrivateAttr
 from crewai.tools import BaseTool
@@ -32,7 +33,7 @@ class ReplicateTool(BaseTool):
             "lora_scale": 1,
             "megapixels": "1",
             "num_outputs": 1,
-            "aspect_ratio": "1:1",
+            "aspect_ratio": "1:1",  # Default square aspect ratio
             "output_format": "webp",
             "guidance_scale": 3,
             "output_quality": 80,
@@ -40,6 +41,11 @@ class ReplicateTool(BaseTool):
             "extra_lora_scale": 1,
             "num_inference_steps": 28,
         }
+    )
+
+    # Mapping of aspect ratio names to API values
+    _aspect_ratio_mapping: Dict[str, str] = PrivateAttr(
+        default={"portrait": "2:3", "landscape": "3:2", None: "1:1"}  # Default square
     )
 
     def __init__(self, model_id: Optional[str] = None, **kwargs):
@@ -57,21 +63,30 @@ class ReplicateTool(BaseTool):
         self._output_dir = Path("output/images")
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
-    def _run(self, prompt: str) -> str:
+    def _run(self, prompt: str, aspect_ratio: str = None) -> str:
         """
         Generate an image using Replicate.
 
         Args:
             prompt: Detailed description of the desired image
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default square)
 
         Returns:
             Path to the generated image file
         """
         print(f"Generating image with prompt: {prompt}")
+        print(f"Using aspect ratio: {aspect_ratio or 'default (1:1)'}")
 
         # Prepare the input parameters
         input_params = self._default_params.copy()
         input_params["prompt"] = prompt
+
+        # Set the aspect ratio if provided
+        if aspect_ratio:
+            api_aspect_ratio = self._aspect_ratio_mapping.get(aspect_ratio)
+            if api_aspect_ratio:
+                input_params["aspect_ratio"] = api_aspect_ratio
+                print(f"Setting aspect ratio to: {api_aspect_ratio}")
 
         try:
             # Generate the image
@@ -214,12 +229,15 @@ class ReplicateTool(BaseTool):
                 print(f"Error in fallback download: {str(e2)}")
                 raise RuntimeError(f"Failed to download image: {str(e)}")
 
-    def generate_and_upload(self, prompt: str) -> tuple[str, str]:
+    def generate_and_upload(
+        self, prompt: str, aspect_ratio: str = None
+    ) -> tuple[str, str]:
         """
         Generate an image and upload it to ImgBB.
 
         Args:
             prompt: Detailed description of the desired image
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default square)
 
         Returns:
             Tuple of (local_path, image_url)
@@ -229,7 +247,7 @@ class ReplicateTool(BaseTool):
 
         # Step 1: Generate the image
         try:
-            local_path = self._run(prompt)
+            local_path = self._run(prompt, aspect_ratio)
             if not local_path or not os.path.exists(local_path):
                 print("Warning: Generated image path is invalid or file doesn't exist")
                 return "", ""
@@ -251,3 +269,41 @@ class ReplicateTool(BaseTool):
             print("Returning local path only")
 
         return local_path, image_url
+
+    def run(self, input_str: str) -> str:
+        """
+        Run the tool with the provided input.
+
+        Args:
+            input_str: Either a direct prompt string or a JSON string with parameters
+                       including 'prompt' and optionally 'aspect_ratio'
+
+        Returns:
+            JSON string containing the path to the generated image and the aspect ratio used
+        """
+        try:
+            # Check if input is JSON
+            try:
+                input_data = json.loads(input_str)
+                if isinstance(input_data, dict):
+                    prompt = input_data.get("prompt", "")
+                    aspect_ratio = input_data.get("aspect_ratio", None)
+
+                    if not prompt:
+                        return "Error: Missing required field 'prompt' in JSON input"
+
+                    image_path = self._run(prompt, aspect_ratio)
+
+                    # Return a JSON object with both the image path and aspect ratio
+                    result = {"image_path": image_path, "aspect_ratio": aspect_ratio}
+                    return json.dumps(result)
+            except json.JSONDecodeError:
+                # Not JSON, treat as direct prompt
+                image_path = self._run(input_str)
+
+                # Return a JSON object with just the image path
+                result = {"image_path": image_path, "aspect_ratio": None}
+                return json.dumps(result)
+
+        except Exception as e:
+            return f"Error: {str(e)}"

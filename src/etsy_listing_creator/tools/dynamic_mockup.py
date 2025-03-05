@@ -21,7 +21,60 @@ class DynamicMockupTool(BaseTool):
     _api_key: str = PrivateAttr()
     _output_dir: Path = PrivateAttr()
     _base_url: str = PrivateAttr(default="https://app.dynamicmockups.com/api/v1")
-    # mockups templates
+
+    # Portrait-oriented templates (2:3 aspect ratio)
+    _portrait_templates: Dict[str, Dict[str, str]] = PrivateAttr(
+        default={
+            "portrait-frame-mockup": {
+                "mockup_uuid": "88ad0ec7-4b34-4be4-a762-154d64229d07",
+                "smart_object_uuid": "89f5a078-8770-4cb8-9e53-acdd45663c76",
+            },
+            "portrait-wall-art-mockup": {
+                "mockup_uuid": "efcfbd73-338c-46f2-a69c-439acd75d5c2",
+                "smart_object_uuid": "4f3ca126-a427-4360-89e2-4505d60479a7",
+            },
+            "portrait-canvas-print-mockup": {
+                "mockup_uuid": "54f260fc-215a-480e-81e0-5328936a5650",
+                "smart_object_uuid": "1efadc65-88ce-4d72-83e1-375a11400960",
+            },
+            "portrait-poster-mockup": {
+                "mockup_uuid": "5d47f14a-629b-49e8-9f8b-c27e5332f404",
+                "smart_object_uuid": "cd7919b0-a9c0-4ee0-851f-004102c60af8",
+            },
+            "portrait-living-room-mockup": {
+                "mockup_uuid": "07bfe149-564c-4f50-bf7f-ae73f8bc870c",
+                "smart_object_uuid": "7f853dca-02f9-4e42-9eed-7bb227bc999e",
+            },
+        }
+    )
+
+    # Landscape-oriented templates (3:2 aspect ratio)
+    _landscape_templates: Dict[str, Dict[str, str]] = PrivateAttr(
+        default={
+            "landscape-frame-mockup": {
+                "mockup_uuid": "88ad0ec7-4b34-4be4-a762-154d64229d07",
+                "smart_object_uuid": "89f5a078-8770-4cb8-9e53-acdd45663c76",
+            },
+            "landscape-wall-art-mockup": {
+                "mockup_uuid": "efcfbd73-338c-46f2-a69c-439acd75d5c2",
+                "smart_object_uuid": "4f3ca126-a427-4360-89e2-4505d60479a7",
+            },
+            "landscape-canvas-print-mockup": {
+                "mockup_uuid": "54f260fc-215a-480e-81e0-5328936a5650",
+                "smart_object_uuid": "1efadc65-88ce-4d72-83e1-375a11400960",
+            },
+            "landscape-poster-mockup": {
+                "mockup_uuid": "5d47f14a-629b-49e8-9f8b-c27e5332f404",
+                "smart_object_uuid": "cd7919b0-a9c0-4ee0-851f-004102c60af8",
+            },
+            "landscape-living-room-mockup": {
+                "mockup_uuid": "07bfe149-564c-4f50-bf7f-ae73f8bc870c",
+                "smart_object_uuid": "7f853dca-02f9-4e42-9eed-7bb227bc999e",
+            },
+        }
+    )
+
+    # Default templates (for backward compatibility)
     _templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
             "frame-mockup": {
@@ -56,35 +109,64 @@ class DynamicMockupTool(BaseTool):
         self._output_dir = Path("output/mockups")
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
+    def get_templates_for_aspect_ratio(
+        self, aspect_ratio: str = None
+    ) -> Dict[str, Dict[str, str]]:
+        """
+        Get the appropriate templates for the specified aspect ratio.
+
+        Args:
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
+
+        Returns:
+            Dictionary of templates appropriate for the aspect ratio
+        """
+        if aspect_ratio == "portrait":
+            print("Using portrait-oriented templates (2:3 aspect ratio)")
+            return self._portrait_templates
+        elif aspect_ratio == "landscape":
+            print("Using landscape-oriented templates (3:2 aspect ratio)")
+            return self._landscape_templates
+        else:
+            print("Using default templates (no specific aspect ratio)")
+            return self._templates
+
     def select_templates(
-        self, template_names: List[str] = None
+        self, template_names: List[str] = None, aspect_ratio: str = None
     ) -> Dict[str, Dict[str, str]]:
         """
         Select specific mockup templates to use.
 
         Args:
             template_names: List of template names to use. If None, all templates will be used.
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
 
         Returns:
             Dictionary of selected templates
         """
+        # Get the appropriate templates for the aspect ratio
+        templates = self.get_templates_for_aspect_ratio(aspect_ratio)
+
         if template_names is None:
-            # Use all templates
-            return self._templates
+            # Use all templates for the specified aspect ratio
+            return templates
 
         selected_templates = {}
         for name in template_names:
-            if name in self._templates:
-                selected_templates[name] = self._templates[name]
+            if name in templates:
+                selected_templates[name] = templates[name]
             else:
                 print(
-                    f"Warning: Template '{name}' not found. Available templates: {list(self._templates.keys())}"
+                    f"Warning: Template '{name}' not found for aspect ratio '{aspect_ratio}'. "
+                    f"Available templates: {list(templates.keys())}"
                 )
 
         if not selected_templates:
-            # If no valid templates were selected, use all templates
-            print("No valid templates selected. Using all available templates.")
-            return self._templates
+            # If no valid templates were selected, use all templates for the specified aspect ratio
+            print(
+                f"No valid templates selected for aspect ratio '{aspect_ratio}'. Using all available templates."
+            )
+            return templates
 
         return selected_templates
 
@@ -193,19 +275,25 @@ class DynamicMockupTool(BaseTool):
             print(f"Error uploading image: {str(e)}")
             raise RuntimeError(f"Failed to upload image: {str(e)}")
 
-    def _run(self, image_path: str, template_names: List[str] = None) -> List[str]:
+    def _run(
+        self,
+        image_path: str,
+        template_names: List[str] = None,
+        aspect_ratio: str = None,
+    ) -> List[str]:
         """
         Generate product mockups using Dynamic Mockups API.
 
         Args:
             image_path: Path to the input image file or URL to an image
             template_names: Optional list of template names to use. If None, all templates will be used.
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
 
         Returns:
             List of paths to the generated mockup files
         """
-        # Select templates to use
-        templates_to_use = self.select_templates(template_names)
+        # Select templates to use based on aspect ratio
+        templates_to_use = self.select_templates(template_names, aspect_ratio)
 
         mockup_paths = []
         successful_templates = 0
@@ -227,7 +315,9 @@ class DynamicMockupTool(BaseTool):
                 image_url = "https://app-dynamicmockups-production.s3.eu-central-1.amazonaws.com/static/api_sandbox_icon.png"
 
         # Generate mockups for each template
-        print(f"\nGenerating {total_templates} different mockups...")
+        print(
+            f"\nGenerating {total_templates} different mockups for aspect ratio: {aspect_ratio or 'default'}..."
+        )
 
         for template_name, uuids in templates_to_use.items():
             try:
@@ -339,11 +429,12 @@ class DynamicMockupTool(BaseTool):
                 if isinstance(input_data, dict):
                     image_path = input_data.get("image_path")
                     template_names = input_data.get("template_names")
+                    aspect_ratio = input_data.get("aspect_ratio")
 
                     if not image_path:
                         return "Error: 'image_path' is required in the JSON input"
 
-                    result = self._run(image_path, template_names)
+                    result = self._run(image_path, template_names, aspect_ratio)
                 else:
                     # If it's not a dict, treat it as a simple image path
                     result = self._run(tool_input)

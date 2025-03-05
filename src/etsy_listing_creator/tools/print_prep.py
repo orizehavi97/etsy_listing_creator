@@ -10,6 +10,7 @@ import tempfile
 import cv2
 import traceback
 import time
+import json
 
 from PIL import Image, ImageFilter, ImageEnhance
 
@@ -19,14 +20,26 @@ class PrintPreparationTool:
     Tool for preparing images for print using Pillow for image processing.
     """
 
-    # Standard print sizes in inches at 300 DPI
-    PRINT_SIZES: Dict[str, Dict[str, int]] = {
+    # Standard portrait print sizes in inches at 300 DPI (height > width)
+    PORTRAIT_PRINT_SIZES: Dict[str, Dict[str, int]] = {
         "4x6": {"width": 1200, "height": 1800},  # 4x6 inches at 300 DPI
         "5x7": {"width": 1500, "height": 2100},  # 5x7 inches at 300 DPI
         "8x10": {"width": 2400, "height": 3000},  # 8x10 inches at 300 DPI
         "11x14": {"width": 3300, "height": 4200},  # 11x14 inches at 300 DPI
         "16x20": {"width": 4800, "height": 6000},  # 16x20 inches at 300 DPI
     }
+
+    # Standard landscape print sizes in inches at 300 DPI (width > height)
+    LANDSCAPE_PRINT_SIZES: Dict[str, Dict[str, int]] = {
+        "6x4": {"width": 1800, "height": 1200},  # 6x4 inches at 300 DPI
+        "7x5": {"width": 2100, "height": 1500},  # 7x5 inches at 300 DPI
+        "10x8": {"width": 3000, "height": 2400},  # 10x8 inches at 300 DPI
+        "14x11": {"width": 4200, "height": 3300},  # 14x11 inches at 300 DPI
+        "20x16": {"width": 6000, "height": 4800},  # 20x16 inches at 300 DPI
+    }
+
+    # Default to portrait for backward compatibility
+    # PRINT_SIZES = PORTRAIT_PRINT_SIZES
 
     def __init__(self, realesrgan_path: Optional[str] = None):
         """
@@ -235,25 +248,29 @@ class PrintPreparationTool:
                 print(f"Even fallback image creation failed: {str(fallback_error)}")
                 raise RuntimeError("Cannot create any image for processing")
 
-    def prepare_print_canvas(self, size_name: str) -> Image.Image:
+    def prepare_print_canvas(
+        self, size_name: str, aspect_ratio: str = None
+    ) -> Image.Image:
         """
-        Create a white canvas for the specified print size.
+        Create a blank canvas for the specified print size.
 
         Args:
             size_name: Name of the print size (e.g., "4x6", "8x10")
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
 
         Returns:
-            A white canvas PIL Image
+            A blank white canvas image
         """
-        if size_name not in self.PRINT_SIZES:
-            raise ValueError(
-                f"Unknown print size: {size_name}. Available sizes: {list(self.PRINT_SIZES.keys())}"
-            )
+        print_sizes = self.get_print_sizes_for_aspect_ratio(aspect_ratio)
 
-        dimensions = self.PRINT_SIZES[size_name]
-        width, height = dimensions["width"], dimensions["height"]
+        if size_name not in print_sizes:
+            raise ValueError(f"Invalid print size: {size_name}")
 
-        # Create a white canvas
+        dimensions = print_sizes[size_name]
+        width = dimensions["width"]
+        height = dimensions["height"]
+
+        # Create a new white image
         canvas = Image.new("RGB", (width, height), (255, 255, 255))
         return canvas
 
@@ -347,6 +364,7 @@ class PrintPreparationTool:
         size_name: str,
         output_filename: Optional[str] = None,
         fill_canvas: bool = True,
+        aspect_ratio: str = None,
     ) -> str:
         """
         Prepare an image for print by upscaling and centering on a canvas.
@@ -357,18 +375,21 @@ class PrintPreparationTool:
             output_filename: Optional name for the output file
             fill_canvas: If True, image will fill the entire canvas (cropping if necessary).
                          If False, image will be centered with white borders.
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
 
         Returns:
             Path to the prepared image
         """
         try:
-            print(f"Preparing image for print: {image_path} at size {size_name}")
+            print(
+                f"Preparing image for print: {image_path} at size {size_name} with aspect ratio {aspect_ratio}"
+            )
 
             # Upscale the image
             upscaled_img = self.upscale_image(image_path)
 
             # Create a canvas for the specified print size
-            canvas = self.prepare_print_canvas(size_name)
+            canvas = self.prepare_print_canvas(size_name, aspect_ratio)
 
             # Center the upscaled image on the canvas
             result = self.center_image_on_canvas(
@@ -381,7 +402,8 @@ class PrintPreparationTool:
             # Save the result
             if output_filename is None:
                 fill_indicator = "filled" if fill_canvas else "centered"
-                output_filename = f"print_ready_{Path(image_path).stem}_{size_name.replace('x', '_')}_{fill_indicator}.png"
+                aspect_suffix = f"_{aspect_ratio}" if aspect_ratio else ""
+                output_filename = f"print_ready_{Path(image_path).stem}_{size_name.replace('x', '_')}{aspect_suffix}_{fill_indicator}.png"
 
             output_path = self.output_dir / output_filename
             result.save(output_path, dpi=(300, 300))
@@ -395,7 +417,7 @@ class PrintPreparationTool:
             raise
 
     def prepare_all_print_sizes(
-        self, image_path: str, fill_canvas: bool = True
+        self, image_path: str, fill_canvas: bool = True, aspect_ratio: str = None
     ) -> List[str]:
         """
         Prepare an image for all standard print sizes.
@@ -404,16 +426,23 @@ class PrintPreparationTool:
             image_path: Path to the input image
             fill_canvas: If True, image will fill the entire canvas (cropping if necessary).
                          If False, image will be centered with white borders.
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
 
         Returns:
             List of paths to the prepared images
         """
         output_paths = []
 
-        for size_name in self.PRINT_SIZES.keys():
+        # Get the appropriate print sizes based on aspect ratio
+        print_sizes = self.get_print_sizes_for_aspect_ratio(aspect_ratio)
+
+        for size_name in print_sizes.keys():
             try:
                 output_path = self.prepare_image_for_print(
-                    image_path, size_name, fill_canvas=fill_canvas
+                    image_path,
+                    size_name,
+                    fill_canvas=fill_canvas,
+                    aspect_ratio=aspect_ratio,
                 )
                 output_paths.append(output_path)
             except Exception as e:
@@ -421,3 +450,67 @@ class PrintPreparationTool:
                 continue
 
         return output_paths
+
+    def get_print_sizes_for_aspect_ratio(
+        self, aspect_ratio: str = None
+    ) -> Dict[str, Dict[str, int]]:
+        """
+        Get the appropriate print sizes dictionary based on the aspect ratio.
+
+        Args:
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
+
+        Returns:
+            Dictionary of print sizes appropriate for the specified aspect ratio
+        """
+        if aspect_ratio == "landscape":
+            print("Using landscape print sizes")
+            return self.LANDSCAPE_PRINT_SIZES
+        else:
+            # Default to portrait for backward compatibility or if explicitly specified
+            print(f"Using portrait print sizes (aspect_ratio={aspect_ratio})")
+            return self.PORTRAIT_PRINT_SIZES
+
+    def run(self, input_str: str) -> str:
+        """
+        Run the tool with the provided input.
+
+        Args:
+            input_str: Either a direct image path or a JSON string with parameters
+                       including 'image_path' and optionally 'aspect_ratio' and 'fill_canvas'
+
+        Returns:
+            A string containing the paths to the processed images
+        """
+        try:
+            # Check if input is JSON
+            try:
+                input_data = json.loads(input_str)
+                if isinstance(input_data, dict):
+                    image_path = input_data.get("image_path", "")
+                    aspect_ratio = input_data.get("aspect_ratio", None)
+                    fill_canvas = input_data.get("fill_canvas", True)
+
+                    if not image_path:
+                        return (
+                            "Error: Missing required field 'image_path' in JSON input"
+                        )
+
+                    print(
+                        f"Processing image with aspect_ratio={aspect_ratio}, fill_canvas={fill_canvas}"
+                    )
+                    output_paths = self.prepare_all_print_sizes(
+                        image_path, fill_canvas=fill_canvas, aspect_ratio=aspect_ratio
+                    )
+                    return json.dumps(output_paths)
+            except json.JSONDecodeError:
+                # Not JSON, treat as direct image path
+                print("Input is not JSON, treating as direct image path")
+                output_paths = self.prepare_all_print_sizes(input_str)
+                return json.dumps(output_paths)
+
+        except Exception as e:
+            error_msg = f"Error processing image: {str(e)}"
+            print(error_msg)
+            traceback.print_exc()
+            return error_msg

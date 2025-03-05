@@ -75,6 +75,14 @@ class EtsyListingCreator:
             )
 
         # Set up task dependencies to ensure proper data flow
+        # The prompt engineer should use the output from the idea generator
+        if "create_prompt" in tasks and "generate_concept" in tasks:
+            tasks["create_prompt"].context = [tasks["generate_concept"]]
+
+        # The image generator should use the output from the prompt engineer
+        if "generate_image" in tasks and "create_prompt" in tasks:
+            tasks["generate_image"].context = [tasks["create_prompt"]]
+
         # The mockup generator should use the output from the image generator
         if "create_mockups" in tasks and "generate_image" in tasks:
             tasks["create_mockups"].context = [tasks["generate_image"]]

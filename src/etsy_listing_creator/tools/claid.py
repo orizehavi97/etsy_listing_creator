@@ -9,6 +9,7 @@ import requests
 from PIL import Image
 from pydantic import Field, PrivateAttr
 import base64
+import traceback
 
 from crewai.tools import BaseTool
 from .print_prep import PrintPreparationTool
@@ -184,7 +185,12 @@ class ClaidImageTool(BaseTool):
                 print(f"Warning: Failed to remove temporary file: {e}")
 
     def _run_with_data(
-        self, image_path: str, data: Dict, size_name: str, fill_canvas: bool = True
+        self,
+        image_path: str,
+        data: Dict,
+        size_name: str,
+        fill_canvas: bool = True,
+        aspect_ratio: str = None,
     ) -> str:
         """
         Process an image with custom data for a specific print size.
@@ -195,19 +201,23 @@ class ClaidImageTool(BaseTool):
             size_name: Name of the print size (e.g., "4x6", "8x10")
             fill_canvas: If True, image will fill the entire canvas (cropping if necessary).
                          If False, image will be centered with white borders.
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
 
         Returns:
             Path to the processed image
         """
         if self._use_local_processing:
             # Use local processing with PrintPreparationTool
-            print(f"Using local processing for size: {size_name}")
+            print(
+                f"Using local processing for size: {size_name} with aspect_ratio={aspect_ratio}"
+            )
             # Always use fill_canvas=True when using local processing to avoid white edges
             return self._print_prep_tool.prepare_image_for_print(
                 image_path,
                 size_name,
                 f"claid_processed_{Path(image_path).stem}_{size_name.replace('x', '_')}.png",
                 fill_canvas=True,
+                aspect_ratio=aspect_ratio,
             )
 
         # Create a temporary copy to avoid permission issues
@@ -274,7 +284,9 @@ class ClaidImageTool(BaseTool):
         print(f"✓ Processed image saved to: {output_path}")
         return str(output_path)
 
-    def _run(self, image_path: str, fill_canvas: bool = True) -> List[str]:
+    def _run(
+        self, image_path: str, fill_canvas: bool = True, aspect_ratio: str = None
+    ) -> List[str]:
         """
         Process an image for all standard print sizes.
 
@@ -282,6 +294,7 @@ class ClaidImageTool(BaseTool):
             image_path: Path to the input image
             fill_canvas: If True, image will fill the entire canvas (cropping if necessary).
                          If False, image will be centered with white borders.
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default)
 
         Returns:
             List of paths to the processed images
@@ -294,16 +307,25 @@ class ClaidImageTool(BaseTool):
         }
 
         output_paths = []
+
+        # If using local processing, delegate to PrintPreparationTool with aspect ratio
+        if self._use_local_processing:
+            print(f"Using local processing with aspect_ratio={aspect_ratio}")
+            return self._print_prep_tool.prepare_all_print_sizes(
+                image_path,
+                fill_canvas=True,  # Always use fill_canvas=True for local processing
+                aspect_ratio=aspect_ratio,
+            )
+
+        # For Claid.ai API processing (not using aspect ratio yet)
         for size_name in self._print_sizes.keys():
             try:
-                # Always use fill_canvas=True when using local processing to avoid white edges
-                actual_fill_canvas = True if self._use_local_processing else fill_canvas
-
                 output_path = self._run_with_data(
                     image_path,
                     default_params,
                     size_name,
-                    fill_canvas=actual_fill_canvas,
+                    fill_canvas=fill_canvas,
+                    aspect_ratio=aspect_ratio,
                 )
                 output_paths.append(output_path)
             except Exception as e:
@@ -311,3 +333,47 @@ class ClaidImageTool(BaseTool):
                 continue
 
         return output_paths
+
+    def run(self, input_str: str) -> str:
+        """
+        Run the tool with the provided input.
+
+        Args:
+            input_str: Either a direct image path or a JSON string with parameters
+                       including 'image_path' and optionally 'aspect_ratio' and 'fill_canvas'
+
+        Returns:
+            A string containing the paths to the processed images
+        """
+        try:
+            # Check if input is JSON
+            try:
+                input_data = json.loads(input_str)
+                if isinstance(input_data, dict):
+                    image_path = input_data.get("image_path", "")
+                    aspect_ratio = input_data.get("aspect_ratio", None)
+                    fill_canvas = input_data.get("fill_canvas", True)
+
+                    if not image_path:
+                        return (
+                            "Error: Missing required field 'image_path' in JSON input"
+                        )
+
+                    print(
+                        f"Processing image with aspect_ratio={aspect_ratio}, fill_canvas={fill_canvas}"
+                    )
+                    output_paths = self._run(
+                        image_path, fill_canvas=fill_canvas, aspect_ratio=aspect_ratio
+                    )
+                    return json.dumps(output_paths)
+            except json.JSONDecodeError:
+                # Not JSON, treat as direct image path
+                print("Input is not JSON, treating as direct image path")
+                output_paths = self._run(input_str)
+                return json.dumps(output_paths)
+
+        except Exception as e:
+            error_msg = f"Error processing image: {str(e)}"
+            print(error_msg)
+            traceback.print_exc()
+            return error_msg

@@ -4,33 +4,51 @@ generate_concept:
     Your output should include a detailed breakdown of the concept with explicit elements such as:
       - Composition elements in short details
       - Narrative or thematic elements that resonate with a specific target audience.
-    Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", and "variations".
+      - Determine the best aspect ratio for this concept: "portrait" (2:3) or "landscape" (3:2)
+        based on the composition and visual impact of the concept.
+    Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", "variations", and "aspect_ratio".
+    For aspect_ratio, specify either "portrait" or "landscape" based on which would best showcase the concept.
   expected_output: >
-    A comprehensive JSON-formatted description of the art concept including detailed keys for style, theme, target_audience, and variations,
-    alongside a brief narrative explanation of the concept.
+    A comprehensive JSON-formatted description of the art concept including detailed keys for style, theme, target_audience, variations,
+    and aspect_ratio (either "portrait" or "landscape"), alongside a brief narrative explanation of the concept.
   agent: idea_generator
 
 create_prompt:
   description: >
-    Transform the previous art concept into a highly detailed, structured prompt for Stability AI’s Flux model: 
+    Transform the previous art concept into a highly detailed, structured prompt for Stability AI's Flux model: 
     Details: [Brief, vivid description of key elements of the concept]
     Style: hyper-realistic, digital watercolor, minimalist (choose one or combine as needed)
     Use concise, comma-separated phrases for optimal T5/CLIP parsing. 
     Stick to indigo blue and honey orange colors theme since it's our shops niche
     Make sure to include "Style of TOK, indigo blue and honey orange colors" at the end of the prompt as plain text
+
+    IMPORTANT: Extract the aspect_ratio from the concept (either "portrait" or "landscape") and include it in your output.
+    Your output should be a JSON object with two keys:
+    - "prompt": The well-structured text prompt for image generation
+    - "aspect_ratio": The aspect ratio from the concept (either "portrait" or "landscape")
   expected_output: >
-    A well-structured, one sentence text prompt that includes all technical and stylistic details required for high-quality image generation,
-    formatted in plain text and ready for direct input into Stability AI.
+    A JSON object containing:
+    - "prompt": A well-structured text prompt that includes all technical and stylistic details required for high-quality image generation
+    - "aspect_ratio": The aspect ratio from the concept (either "portrait" or "landscape")
   agent: prompt_engineer
 
 generate_image:
   description: >
     Utilize Replicate AI to generate a high-quality digital art image based on the detailed prompt.
     Include instructions for fallback regeneration if the output does not meet quality standards.
-    Use the exact prompt from the prompt_engineer agent, do not modify it.
+
+    IMPORTANT: Extract both the prompt and aspect_ratio from the prompt_engineer's output.
+    The prompt_engineer provides a JSON object with "prompt" and "aspect_ratio" keys.
+    Use the exact prompt from the "prompt" field, and pass the "aspect_ratio" value to the ReplicateTool.
+
+    When using the ReplicateTool, provide the aspect_ratio parameter in your JSON input:
+    {
+      "prompt": "the prompt text",
+      "aspect_ratio": "portrait" or "landscape"
+    }
   expected_output: >
     A high-quality image that satisfies the technical and aesthetic requirements,
-    accompanied by a log detailing generation parameters and any quality assessments.
+    accompanied by a log detailing generation parameters (including the aspect ratio used) and any quality assessments.
   agent: image_generator
 
 research_seo:
@@ -51,30 +69,68 @@ research_seo:
 process_image:
   description: >
     Process the generated image to create multiple print-ready versions in standard sizes.
+
+    IMPORTANT: The image_generator now provides a JSON output with both the image path and aspect ratio.
+    You need to parse this JSON to extract both values:
+    ```
+    {
+      "image_path": "/path/to/image.png",
+      "aspect_ratio": "portrait" or "landscape"
+    }
+    ```
+
     Steps include:
-      - Automatically generating 5 standard print sizes (4x6", 5x7", 8x10", 11x14", 16x20").
+      - Automatically generating 5 standard print sizes based on the aspect ratio:
+        - For portrait (2:3): 4x6", 5x7", 8x10", 11x14", 16x20"
+        - For landscape (3:2): 6x4", 7x5", 10x8", 14x11", 20x16"
       - Maintaining aspect ratio while upscaling to each target dimension.
       - Ensuring 300 DPI resolution for all sizes.
       - Applying HDR and sharpness enhancements for optimal print quality.
       - Verifying image quality and dimensions for each size.
+
+    When using the PrintPreparationTool, provide the aspect_ratio parameter in your JSON input:
+    {
+      "image_path": "the image path from the JSON",
+      "aspect_ratio": "the aspect_ratio from the JSON",
+      "fill_canvas": true
+    }
+
     Each size will be processed with professional print standards and saved with a clear size indicator in the filename.
   expected_output: >
-    A list of paths to the processed image files, one for each standard print size (4x6" to 16x20"),
-    with verification of quality metrics and proper naming convention.
+    A list of paths to the processed image files, one for each standard print size appropriate for the aspect ratio used,
+    with verification of quality metrics, proper naming convention, and the aspect ratio used.
   agent: image_processor
 
 create_mockups:
   description: >
     Generate high-fidelity product mockups that showcase the digital art in realistic, marketable contexts.
     IMPORTANT: Use the image generated by the image_generator agent (NOT the processed images).
+
+    The image_generator now provides a JSON output with both the image path and aspect ratio.
+    You need to parse this JSON to extract both values:
+    ```
+    {
+      "image_path": "/path/to/image.png",
+      "aspect_ratio": "portrait" or "landscape"
+    }
+    ```
+
     The process should:
       - Dynamically overlay the generated art onto various scenes (e.g., framed on a wall, within a styled room setting).
       - Use the URL of the image from the image_generator's output directly.
       - Include detailed instructions for positioning, perspective, and environmental lighting to enhance realism.
+      - Extract the aspect_ratio used by the image_generator and pass it to the DynamicMockupTool.
+
+    When using the DynamicMockupTool, provide the aspect_ratio parameter in your JSON input:
+    {
+      "image_path": "the image path from the JSON",
+      "aspect_ratio": "the aspect_ratio from the JSON"
+    }
+
     Do not use any sandbox or placeholder images - only use the actual generated image from the previous step.
   expected_output: >
     A set of high-resolution mockup images accompanied by metadata in JSON format,
-    detailing the context (e.g., indoor, outdoor, framed, unframed) and any applied transformations.
+    detailing the context (e.g., indoor, outdoor, framed, unframed), the aspect ratio used, and any applied transformations.
   agent: mockup_generator
 
 create_listing:
