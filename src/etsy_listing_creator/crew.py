@@ -8,7 +8,8 @@ from crewai import Agent, Task, Crew
 from dotenv import load_dotenv
 
 from .tools import (
-    StabilityAITool,
+    # StabilityAITool,  # Temporarily disabled
+    ReplicateImageTool,
     ClaidImageTool,
     DynamicMockupTool,
     SemrushTool,
@@ -39,7 +40,9 @@ class EtsyListingCreator:
 
         agents = {}
         tools = {
-            "image_generator": [StabilityAITool()],
+            "image_generator": [
+                ReplicateImageTool()
+            ],  # Using Replicate instead of Stability AI
             # Always use local processing with PrintPreparationTool instead of Claid.ai API
             "image_processor": [ClaidImageTool(use_local_processing=True)],
             "mockup_generator": [DynamicMockupTool()],
