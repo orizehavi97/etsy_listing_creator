@@ -6,11 +6,37 @@ generate_concept:
       - Narrative or thematic elements that resonate with a specific target audience.
       - Determine the best aspect ratio for this concept: "portrait" (2:3) or "landscape" (3:2)
         based on the composition and visual impact of the concept.
-    Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", "variations", and "aspect_ratio".
+    Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", and "aspect_ratio".
     For aspect_ratio, specify either "portrait" or "landscape" based on which would best showcase the concept.
+
+    IMPORTANT: After generating the concept, you MUST save it as a JSON file using the JsonSaveTool.
+    There are two ways to do this:
+
+    Option 1 (Preferred): Pass your concept JSON object directly to the JsonSaveTool with the filename:
+    ```python
+    from etsy_listing_creator.tools import JsonSaveTool
+
+    json_saver = JsonSaveTool()
+    concept_json_path = json_saver.run({
+        "data": your_concept_json_object,  # Your generated concept as a dictionary
+        "filename": "output/concept_data.json"  # Save to this specific path
+    })
+    ```
+
+    Option 2: If you encounter any errors with Option 1, you can also try passing your concept JSON object directly:
+    ```python
+    from etsy_listing_creator.tools import JsonSaveTool
+
+    json_saver = JsonSaveTool()
+    your_concept_json_object["_filename"] = "output/concept_data.json"  # Add a filename hint
+    concept_json_path = json_saver.run(your_concept_json_object)
+    ```
+
+    Make sure to include the saved file path in your response so it can be used by subsequent tasks.
   expected_output: >
     A comprehensive JSON-formatted description of the art concept including detailed keys for style, theme, target_audience, variations,
     and aspect_ratio (either "portrait" or "landscape"), alongside a brief narrative explanation of the concept.
+    The concept should be saved to a JSON file and the path to this file should be included in the response.
   agent: idea_generator
 
 create_prompt:
@@ -55,15 +81,46 @@ research_seo:
   description: >
     Perform comprehensive keyword research and competitive analysis to optimize the Etsy listing.
     The output should include:
-      - A ranked list of effective keywords based on search volume and relevancy.
+      - A ranked list of 13 effective keywords based on search volume and relevancy.
       - A suggested title that integrates high-impact keywords.
       - A detailed, SEO-friendly description tailored to attract the target audience.
+
+    Title guidelines:
+      - The title should be with this EXACT format: {2 words concept summary} | Indigo Bloom Downloadable PRINTABLE Digital | IB{Listing number}
+      - An example for a correct title: "Futuristic Cityscape Art | Indigo Bloom Downloadable PRINTABLE Digital | IB12"
+
     Provide a brief rationale for each recommendation to demonstrate the analysis process.
+
+    IMPORTANT: After generating the SEO data, you MUST save it as a JSON file using the JsonSaveTool.
+    There are two ways to do this:
+
+    Option 1 (Preferred): Pass your SEO JSON object directly to the JsonSaveTool with the filename:
+    ```python
+    from etsy_listing_creator.tools import JsonSaveTool
+
+    json_saver = JsonSaveTool()
+    seo_json_path = json_saver.run({
+        "data": your_seo_json_object,  # Your generated SEO data as a dictionary
+        "filename": "output/seo_data.json"  # Save to this specific path
+    })
+    ```
+
+    Option 2: If you encounter any errors with Option 1, you can also try passing your SEO JSON object directly:
+    ```python
+    from etsy_listing_creator.tools import JsonSaveTool
+
+    json_saver = JsonSaveTool()
+    your_seo_json_object["_filename"] = "output/seo_data.json"  # Add a filename hint
+    seo_json_path = json_saver.run(your_seo_json_object)
+    ```
+
+    Make sure to include the saved file path in your response so it can be used by subsequent tasks.
   expected_output: >
     A JSON structure containing:
       - "keywords": [array of optimized keywords],
       - "title": optimized title string,
       - "description": SEO-enhanced listing description.
+    The SEO data should be saved to a JSON file and the path to this file should be included in the response.
   agent: seo_researcher
 
 process_image:
@@ -71,13 +128,16 @@ process_image:
     Process the generated image to create multiple print-ready versions in standard sizes.
 
     IMPORTANT: The image_generator now provides a JSON output with both the image path and aspect ratio.
-    You need to parse this JSON to extract both values:
+    You need to parse this JSON to extract both values. The output will look something like this:
     ```
     {
-      "image_path": "/path/to/image.png",
+      "image_path": "output/images/replicate_generated_1234567890.webp",
       "aspect_ratio": "portrait" or "landscape"
     }
     ```
+
+    DO NOT use the example paths shown in these instructions. You MUST extract the ACTUAL image path from the image_generator's output.
+    The actual path will typically be something like "output/images/replicate_generated_1234567890.webp" with a timestamp.
 
     Steps include:
       - Automatically generating 5 standard print sizes based on the aspect ratio:
@@ -90,8 +150,8 @@ process_image:
 
     When using the PrintPreparationTool, provide the aspect_ratio parameter in your JSON input:
     {
-      "image_path": "the image path from the JSON",
-      "aspect_ratio": "the aspect_ratio from the JSON",
+      "image_path": "THE ACTUAL PATH FROM THE IMAGE GENERATOR'S OUTPUT",
+      "aspect_ratio": "portrait" or "landscape",
       "fill_canvas": true
     }
 
@@ -107,13 +167,16 @@ create_mockups:
     IMPORTANT: Use the image generated by the image_generator agent (NOT the processed images).
 
     The image_generator now provides a JSON output with both the image path and aspect ratio.
-    You need to parse this JSON to extract both values:
+    You need to parse this JSON to extract both values. The output will look something like this:
     ```
     {
-      "image_path": "/path/to/image.png",
+      "image_path": "output/images/replicate_generated_1234567890.webp",
       "aspect_ratio": "portrait" or "landscape"
     }
     ```
+
+    DO NOT use the example paths shown in these instructions. You MUST extract the ACTUAL image path from the image_generator's output.
+    The actual path will typically be something like "output/images/replicate_generated_1234567890.webp" with a timestamp.
 
     The process should:
       - Dynamically overlay the generated art onto various scenes (e.g., framed on a wall, within a styled room setting).
@@ -121,11 +184,17 @@ create_mockups:
       - Include detailed instructions for positioning, perspective, and environmental lighting to enhance realism.
       - Extract the aspect_ratio used by the image_generator and pass it to the DynamicMockupTool.
 
-    When using the DynamicMockupTool, provide the aspect_ratio parameter in your JSON input:
+    When using the DynamicMockupTool, provide ALL required parameters in your JSON input:
     {
-      "image_path": "the image path from the JSON",
-      "aspect_ratio": "the aspect_ratio from the JSON"
+      "image_path": "THE ACTUAL PATH FROM THE IMAGE GENERATOR'S OUTPUT",
+      "aspect_ratio": "portrait" or "landscape",
+      "template_names": ["frame-mockup", "wall-art-mockup", "canvas-print-mockup", "poster-mockup", "living-room-mockup"]
     }
+
+    The template_names parameter is REQUIRED and should include a list of template names to use for the mockups.
+    Use the following template names based on the aspect ratio:
+    - For landscape: ["landscape-frame-mockup", "landscape-wall-art-mockup", "landscape-canvas-print-mockup", "landscape-poster-mockup", "landscape-living-room-mockup"]
+    - For portrait: ["portrait-frame-mockup", "portrait-wall-art-mockup", "portrait-canvas-print-mockup", "portrait-poster-mockup", "portrait-living-room-mockup"]
 
     Do not use any sandbox or placeholder images - only use the actual generated image from the previous step.
   expected_output: >
@@ -135,23 +204,129 @@ create_mockups:
 
 create_listing:
   description: >
-    Compile all generated content into a complete and ready-to-publish Etsy listing.
-    The listing should include:
-      - The optimized title, description, and tags from the SEO research.
-      - All relevant images (printable PNG, PDF, and mockups) with their associated metadata.
-      - Pricing suggestions if applicable, and any additional details needed for Etsy's platform.
-    The final output should be a structured JSON object suitable for direct integration with the Etsy API.
-    IMPORTANT: Save the complete listing information as a JSON file named "listing.json" in the output directory.
-    To save the JSON data, use the JSON Save Tool with the following format:
-      - Pass the listing data directly as a dictionary (not as a string)
-      - Use "listing.json" as the filename (do not include "output/" in the filename)
+    Create a complete Etsy listing based on the generated concept, image, SEO research, and mockups.
+    Compile all the information into a structured format suitable for the Etsy API.
+
+    IMPORTANT: Organize all files created in the workflow into a structured directory system:
+
+    1. Use the FileOrganizerTool to create a structured directory system with subdirectories for each file and step of the workflow.
+       The tool will create a main directory named with the listing name and timestamp, and subdirectories for:
+         * concept/ - For concept information
+         * original/ - For the original generated image
+         * prints/ - For all print-ready versions
+         * mockups/ - For all mockup images
+         * metadata/ - For SEO and listing information
+
+    2. Prepare a JSON object with the following structure to pass to the FileOrganizerTool:
+       ```json
+       {
+         "listing_name": "Descriptive name based on the concept",
+         "files": {
+           "concept": ["output/concept_data.json"],
+           "original": ["path/to/original_image.png"],
+           "prints": ["path/to/print1.png", "path/to/print2.png", ...],
+           "mockups": ["path/to/mockup1.png", "path/to/mockup2.png", ...],
+           "metadata": ["output/seo_data.json"]
+         },
+         "cleanup": true  // Set to true to delete original files after copying
+       }
+       ```
+
+    3. The FileOrganizerTool will:
+       - Create a unique directory with the listing name and timestamp
+       - Create all necessary subdirectories
+       - Copy all files to their appropriate locations with meaningful names
+       - Generate a manifest.json file documenting all organized files
+       - Delete the original files after copying them (if cleanup is true)
+       - Return the path to the organized directory structure
+
+    4. Workflow steps for file organization:
+       a. Collect all file paths generated during the workflow:
+          - The concept JSON from the idea_generator (should be at "output/concept_data.json")
+          - The original image from the image_generator (extract from JSON output - the actual path, not the example path)
+          - All print-ready versions from the process_image task (the actual paths returned by the tool)
+          - All mockup images from the create_mockups task (the actual paths returned by the tool)
+          - The SEO information from the research_seo task (should be at "output/seo_data.json")
+       
+       b. Create a descriptive listing name based on the concept
+       
+       c. Organize the files using the FileOrganizerTool:
+          ```python
+          from etsy_listing_creator.tools import FileOrganizerTool
+          
+          # IMPORTANT: Use the ACTUAL file paths from the previous steps, not example paths
+          organizer = FileOrganizerTool()
+          organized_dir = organizer.run({
+              "listing_name": "Descriptive Listing Name",
+              "files": {
+                  "concept": ["output/concept_data.json"],  # Use the saved concept JSON file
+                  "original": [actual_original_image_path],  # Use the ACTUAL path from the image generator
+                  "prints": actual_print_ready_paths,  # Use the ACTUAL paths from the process_image task
+                  "mockups": actual_mockup_image_paths,  # Use the ACTUAL paths from the create_mockups task
+                  "metadata": ["output/seo_data.json"]  # Use the saved SEO JSON file
+              },
+              "cleanup": true  # Delete original files after copying
+          })
+          ```
+
+    5. CRITICAL: Create a comprehensive listing JSON with all details:
+       - You MUST compile all the SEO data (title, description, tags) from the research_seo task
+       - You MUST include pricing information based on print sizes and market research
+       - You MUST add file paths to all assets (original, prints, mockups)
+       - You MUST include any additional metadata for Etsy's API
+       
+       The listing JSON should include at minimum:
+       ```json
+       {
+         "title": "SEO-optimized title from research_seo",
+         "description": "Detailed description from research_seo",
+         "tags": ["tag1", "tag2", ...],
+         "assets": {
+           "original": "path/to/original/image.png",
+           "prints": ["path/to/print1.png", "path/to/print2.png", ...],
+           "mockups": ["path/to/mockup1.png", "path/to/mockup2.png", ...]
+         },
+         "metadata": {
+           "concept": { ... concept JSON ... },
+           "aspect_ratio": "portrait" or "landscape",
+           "style": "style from concept",
+           "theme": "theme from concept",
+           "target_audience": "audience from concept"
+         },
+         "directory": "path/to/organized/directory"
+       }
+       ```
+
+    6. IMPORTANT: Save the complete listing information as a JSON file named "listing.json" in the metadata/ subdirectory.
+       To save the JSON data, use the JSON Save Tool with the following format:
+       - Pass the listing data directly as a dictionary (not as a string)
+       - Use the path returned by the FileOrganizerTool + "/metadata/listing.json" as the filename
+       
+       Example:
+       ```python
+       from etsy_listing_creator.tools import JsonSaveTool
+       
+       json_saver = JsonSaveTool()
+       listing_json_path = json_saver.run({
+           "data": listing_data_dictionary,  # The complete listing information
+           "filename": f"{organized_dir}/metadata/listing.json"
+       })
+       ```
+
+    7. YOUR FINAL RESPONSE MUST BE THE COMPLETE LISTING JSON OBJECT, not just the path to the file.
+       This ensures that all the listing details are properly included in the output.
   expected_output: >
     A comprehensive JSON object containing:
       - "title": optimized title,
       - "description": detailed listing description,
       - "tags": array of SEO-friendly tags,
       - "pricing": pricing details (if applicable),
-      - "assets": { "printable": file links, "pdf": file links, "mockups": file links },
-      - "metadata": additional details for listing optimization.
-    The JSON should be saved to "output/listing.json" and the path to this file should be included in the response.
+      - "assets": { 
+          "original": file links to original images,
+          "printable": file links to print-ready versions, 
+          "mockups": file links to mockup images 
+        },
+      - "metadata": additional details for listing optimization,
+      - "directory": path to the organized listing directory.
+    The JSON should be saved to the metadata subdirectory and the path to the organized directory structure should be included in the response.
   agent: listing_creator

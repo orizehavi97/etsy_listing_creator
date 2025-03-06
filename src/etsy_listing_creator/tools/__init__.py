@@ -5,6 +5,7 @@ from .dynamic_mockup import DynamicMockupTool
 from .semrush import SemrushTool
 from .json_save import JsonSaveTool
 from .print_prep import PrintPreparationTool
+from .file_organizer import FileOrganizerTool
 
 __all__ = [
     # "StabilityAITool",  # Temporarily disabled
@@ -14,4 +15,5 @@ __all__ = [
     "SemrushTool",
     "JsonSaveTool",
     "PrintPreparationTool",
+    "FileOrganizerTool",
 ]

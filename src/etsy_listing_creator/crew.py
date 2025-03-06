@@ -15,6 +15,7 @@ from .tools import (
     SemrushTool,
     JsonSaveTool,
     PrintPreparationTool,
+    FileOrganizerTool,
 )
 
 
@@ -40,14 +41,15 @@ class EtsyListingCreator:
 
         agents = {}
         tools = {
+            "idea_generator": [JsonSaveTool()],
             "image_generator": [
                 ReplicateTool()
             ],  # Using Replicate instead of StabilityAI
             # Always use local processing with PrintPreparationTool instead of Claid.ai API
             "image_processor": [ClaidImageTool(use_local_processing=True)],
             "mockup_generator": [DynamicMockupTool()],
-            # "seo_researcher": [SemrushTool()],
-            "listing_creator": [JsonSaveTool()],
+            "seo_researcher": [JsonSaveTool()],
+            "listing_creator": [JsonSaveTool(), FileOrganizerTool()],
         }
 
         for agent_id, config in agents_config.items():
@@ -122,17 +124,55 @@ class EtsyListingCreator:
                 f"Use this concept as a starting point: {concept}"
             )
 
-        result = crew.kickoff()
+        # Ensure the output directory exists
+        output_dir = Path("output")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Ensuring output directory exists: {output_dir}")
 
-        # Check if the result contains a path to the JSON file
-        if isinstance(result, str) and "output/listing.json" in result:
-            print(f"Listing saved to: {result}")
+        # Run the crew
+        print("Starting the crew workflow...")
+        result = crew.kickoff()
+        print(f"Crew workflow completed with result: {result}")
+
+        # Check if the result contains a path to the organized directory
+        if isinstance(result, str):
+            # Handle both old format (direct path to listing.json) and new format (directory path)
+            if "output/listing.json" in result:
+                json_path = result
+                print(f"Listing saved to: {json_path}")
+            elif "listing_" in result and "/metadata/listing.json" not in result:
+                # This is likely a directory path from the FileOrganizerTool
+                json_path = os.path.join(result, "metadata", "listing.json")
+                print(f"Listing directory created at: {result}")
+                print(f"Listing JSON expected at: {json_path}")
+            else:
+                # This might be a full path to the listing.json in the new structure
+                json_path = result
+                print(f"Listing saved to: {json_path}")
 
             # Optionally, load and return the JSON data
             try:
-                with open(result, "r", encoding="utf-8") as f:
-                    json_data = json.load(f)
-                return json_data
+                if os.path.exists(json_path):
+                    print(f"Loading JSON data from: {json_path}")
+                    with open(json_path, "r", encoding="utf-8") as f:
+                        json_data = json.load(f)
+                    return json_data
+                else:
+                    print(f"Warning: JSON file not found at {json_path}")
+                    
+                    # Check if the concept and SEO files were created
+                    concept_path = os.path.join("output", "concept_data.json")
+                    seo_path = os.path.join("output", "seo_data.json")
+                    
+                    if os.path.exists(concept_path):
+                        print(f"Concept file exists at: {concept_path}")
+                    else:
+                        print(f"Warning: Concept file not found at {concept_path}")
+                        
+                    if os.path.exists(seo_path):
+                        print(f"SEO file exists at: {seo_path}")
+                    else:
+                        print(f"Warning: SEO file not found at {seo_path}")
             except Exception as e:
                 print(f"Warning: Could not load the saved JSON file: {str(e)}")
 

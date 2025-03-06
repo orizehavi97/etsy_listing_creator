@@ -1,12 +1,18 @@
 import os
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 import json
 
 import requests
-from pydantic import Field, PrivateAttr
+from pydantic import Field, PrivateAttr, BaseModel
 
 from crewai.tools import BaseTool
+
+
+class DynamicMockupToolSchema(BaseModel):
+    image_path: str = Field(description="Path to the input image file")
+    template_names: Optional[List[str]] = Field(default=None, description="Optional list of template names to use")
+    aspect_ratio: Optional[str] = Field(default=None, description="The aspect ratio to use ('portrait', 'landscape', or None for default)")
 
 
 class DynamicMockupTool(BaseTool):
@@ -16,6 +22,8 @@ class DynamicMockupTool(BaseTool):
     Input should be a path to an image file.
     Returns a list of paths to the generated mockup files.
     """
+    
+    schema = DynamicMockupToolSchema
 
     # Private attributes using Pydantic's PrivateAttr
     _api_key: str = PrivateAttr()
@@ -428,11 +436,24 @@ class DynamicMockupTool(BaseTool):
                 input_data = json.loads(tool_input)
                 if isinstance(input_data, dict):
                     image_path = input_data.get("image_path")
-                    template_names = input_data.get("template_names")
                     aspect_ratio = input_data.get("aspect_ratio")
+                    template_names = input_data.get("template_names")
 
                     if not image_path:
                         return "Error: 'image_path' is required in the JSON input"
+                    
+                    # If template_names is not provided, automatically select based on aspect_ratio
+                    if template_names is None and aspect_ratio:
+                        print(f"No template_names provided, automatically selecting templates for {aspect_ratio} aspect ratio")
+                        if aspect_ratio == "portrait":
+                            template_names = list(self._portrait_templates.keys())
+                            print(f"Selected portrait templates: {template_names}")
+                        elif aspect_ratio == "landscape":
+                            template_names = list(self._landscape_templates.keys())
+                            print(f"Selected landscape templates: {template_names}")
+                        else:
+                            template_names = list(self._templates.keys())
+                            print(f"Selected default templates: {template_names}")
 
                     result = self._run(image_path, template_names, aspect_ratio)
                 else:
