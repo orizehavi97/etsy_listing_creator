@@ -38,19 +38,19 @@ The system follows a **sequential CrewAI workflow**, where different agents hand
 | **Prompt Engineer**  | Convert concepts into AI prompts with aspect ratio preservation. | OpenAI API                      |
 | **Image Generator**  | Create images from prompts using specified aspect ratio.         | ReplicateTool                   |
 | **SEO Researcher**   | Find best keywords & optimize description.                       | OpenAI API, JsonSaveTool        |
-| **Image Processor**  | Create multiple print-ready versions based on aspect ratio.      | PrintPreparationTool            |
+| **Image Processor**  | Create multiple print-ready versions based on aspect ratio.      | ImageProcessingTool             |
 | **Mockup Generator** | Generate product mockups with aspect ratio-aware templates.      | DynamicMockupTool               |
 | **Listing Creator**  | Organize files and compile details into a complete Etsy listing. | FileOrganizerTool, JsonSaveTool |
 
 ### **Tools**
 
-| Tool Name                | Description                                                           |
-| ------------------------ | --------------------------------------------------------------------- |
-| **ReplicateTool**        | Generates images using Replicate AI with aspect ratio support.        |
-| **PrintPreparationTool** | Creates print-ready versions in standard sizes based on aspect ratio. |
-| **DynamicMockupTool**    | Creates product mockups with templates matched to the aspect ratio.   |
-| **JsonSaveTool**         | Saves JSON data to files with support for subdirectories.             |
-| **FileOrganizerTool**    | Organizes files into a structured directory system.                   |
+| Tool Name               | Description                                                           |
+| ----------------------- | --------------------------------------------------------------------- |
+| **ReplicateTool**       | Generates images using Replicate AI with aspect ratio support.        |
+| **ImageProcessingTool** | Creates print-ready versions in standard sizes based on aspect ratio. |
+| **DynamicMockupTool**   | Creates product mockups with templates matched to the aspect ratio.   |
+| **JsonSaveTool**        | Saves JSON data to files with support for subdirectories.             |
+| **FileOrganizerTool**   | Organizes files into a structured directory system.                   |
 
 ---
 

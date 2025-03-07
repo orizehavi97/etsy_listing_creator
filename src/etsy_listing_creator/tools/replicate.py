@@ -5,6 +5,8 @@ import time
 import stat
 import requests
 import json
+import shutil
+import base64
 
 from pydantic import Field, PrivateAttr
 from crewai.tools import BaseTool
@@ -257,16 +259,47 @@ class ReplicateTool(BaseTool):
             print(f"Error generating image: {str(e)}")
             return "", ""
 
-        # Step 2: Upload to ImgBB
+        # Step 2: Upload to ImgBB (if needed)
         try:
-            from .claid import ClaidImageTool
+            from .image_processing import ImageProcessingTool
 
-            claid_tool = ClaidImageTool(use_local_processing=True)
-            image_url = claid_tool._upload_to_imgbb(local_path)
-            print(f"✓ Image uploaded to ImgBB: {image_url}")
+            # Create a temporary copy of the image
+            temp_dir = Path("output/temp")
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            temp_path = temp_dir / f"temp_{Path(local_path).name}"
+            shutil.copy2(local_path, temp_path)
+
+            # Upload to ImgBB
+            imgbb_key = os.getenv("IMGBB_API_KEY")
+            if imgbb_key:
+                with open(temp_path, "rb") as file:
+                    image_data = base64.b64encode(file.read()).decode("utf-8")
+                
+                url = "https://api.imgbb.com/1/upload"
+                payload = {
+                    "key": imgbb_key,
+                    "image": image_data,
+                }
+                
+                response = requests.post(url, payload)
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("success", False):
+                        image_url = result["data"]["url"]
+                        print(f"✓ Image uploaded to ImgBB: {image_url}")
+                    else:
+                        print(f"Warning: ImgBB upload failed: {result.get('error', {}).get('message', 'Unknown error')}")
+                        image_url = ""
+                else:
+                    print(f"Warning: ImgBB upload failed with status code {response.status_code}")
+                    image_url = ""
+            else:
+                print("Warning: IMGBB_API_KEY not found in environment variables")
+                image_url = ""
         except Exception as e:
             print(f"Warning: Failed to upload image to ImgBB: {str(e)}")
             print("Returning local path only")
+            image_url = ""
 
         return local_path, image_url
 

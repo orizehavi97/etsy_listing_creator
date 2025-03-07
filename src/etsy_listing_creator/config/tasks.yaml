@@ -148,12 +148,16 @@ process_image:
       - Applying HDR and sharpness enhancements for optimal print quality.
       - Verifying image quality and dimensions for each size.
 
-    When using the PrintPreparationTool, provide the aspect_ratio parameter in your JSON input:
+    When using the ImageProcessingTool, provide the aspect_ratio parameter in your JSON input:
     {
       "image_path": "THE ACTUAL PATH FROM THE IMAGE GENERATOR'S OUTPUT",
       "aspect_ratio": "portrait" or "landscape",
-      "fill_canvas": true
+      "fill_canvas": true,
+      "preserve_colors": true
     }
+
+    The preserve_colors parameter (default: true) controls whether to preserve the original colors of the image:
+    - always set to true to maintain the original colors while still making the image print-ready
 
     Each size will be processed with professional print standards and saved with a clear size indicator in the filename.
   expected_output: >
