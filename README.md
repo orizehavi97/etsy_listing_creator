@@ -87,6 +87,7 @@ listing_name_timestamp/
 - **[CrewAI](https://github.com/joaomdmoura/crewai)** → AI agent orchestration
 - **[OpenAI API](https://platform.openai.com/)** → Idea generation & listing creation
 - **[Replicate AI](https://replicate.com/)** → AI image generation
+- **[Dynamic Mockups API](https://app.dynamicmockups.com/dashboard-api/)** → Generate mockups
 - **[Pillow](https://python-pillow.org/)** → Image processing
 - **[PyYAML](https://pyyaml.org/)** → Configuration management
 
@@ -105,9 +106,13 @@ pip install -r requirements.txt
 Create a `.env` file in the root directory with your API keys:
 
 ```bash
-OPENAI_API_KEY=your_openai_api_key
-REPLICATE_API_TOKEN=your_replicate_api_token
+# Required API keys
+OPENAI_API_KEY=your_openai_api_key                       # Required for AI agents (idea generation, prompt engineering, SEO)
+REPLICATE_API_TOKEN=your_replicate_api_token             # Required for image generation
+IMGBB_API_KEY=your_imgbb_api_key                         # Required For uploading images to ImgBB (used by ReplicateTool)
+DYNAMIC_MOCKUPS_API_KEY=your_dynamic_mockups_api_key     # Required for creating makeups           
 ```
+
 
 ### **3️⃣ Run the Script**
 
