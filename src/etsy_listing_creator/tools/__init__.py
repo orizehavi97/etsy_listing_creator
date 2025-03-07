@@ -1,7 +1,6 @@
 # from .stability_ai import StabilityAITool  # Temporarily disabled
 from .replicate import ReplicateTool  # New Replicate-based image generator
 from .dynamic_mockup import DynamicMockupTool
-from .semrush import SemrushTool
 from .json_save import JsonSaveTool
 from .file_organizer import FileOrganizerTool
 from .image_processing import ImageProcessingTool
@@ -11,7 +10,6 @@ __all__ = [
     "ReplicateTool",  # New Replicate-based image generator
     "ImageProcessingTool",
     "DynamicMockupTool",
-    "SemrushTool",
     "JsonSaveTool",
     "FileOrganizerTool",
 ]
