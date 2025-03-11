@@ -10,26 +10,38 @@ generate_concept:
     For aspect_ratio, specify either "portrait" or "landscape" based on which would best showcase the concept.
 
     IMPORTANT: After generating the concept, you MUST save it as a JSON file using the JsonSaveTool.
-    There are two ways to do this:
+    The tool will ask the user if they want to use this concept. If the user rejects the concept,
+    you must generate a new concept and try again until the user approves.
 
-    Option 1 (Preferred): Pass your concept JSON object directly to the JsonSaveTool with the filename:
+    Here's how to handle the user approval process:
     ```python
     from etsy_listing_creator.tools import JsonSaveTool
 
     json_saver = JsonSaveTool()
-    concept_json_path = json_saver.run({
-        "data": your_concept_json_object,  # Your generated concept as a dictionary
-        "filename": "output/concept_data.json"  # Save to this specific path
-    })
-    ```
 
-    Option 2: If you encounter any errors with Option 1, you can also try passing your concept JSON object directly:
-    ```python
-    from etsy_listing_creator.tools import JsonSaveTool
-
-    json_saver = JsonSaveTool()
-    your_concept_json_object["_filename"] = "output/concept_data.json"  # Add a filename hint
-    concept_json_path = json_saver.run(your_concept_json_object)
+    # Keep generating concepts until the user approves
+    while True:
+        # Generate your concept
+        your_concept_json_object = {
+            "style": "Your generated style",
+            "theme": "Your generated theme",
+            "target_audience": "Your identified target audience",
+            "aspect_ratio": "portrait" or "landscape"
+        }
+        
+        # Save the concept and check for user approval
+        result = json_saver.run({
+            "data": your_concept_json_object,
+            "filename": "output/concept_data.json"
+        })
+        
+        # If the user approved the concept, break the loop
+        if result != "CONCEPT_REJECTED":
+            concept_json_path = result
+            break
+        
+        # If we're here, the user rejected the concept, so generate a new one
+        print("Generating a new concept based on user feedback...")
     ```
 
     Make sure to include the saved file path in your response so it can be used by subsequent tasks.
@@ -61,7 +73,6 @@ create_prompt:
 generate_image:
   description: >
     Utilize Replicate AI to generate a high-quality digital art image based on the detailed prompt.
-    Include instructions for fallback regeneration if the output does not meet quality standards.
 
     IMPORTANT: Extract both the prompt and aspect_ratio from the prompt_engineer's output.
     The prompt_engineer provides a JSON object with "prompt" and "aspect_ratio" keys.
@@ -72,6 +83,12 @@ generate_image:
       "prompt": "the prompt text",
       "aspect_ratio": "portrait" or "landscape"
     }
+
+    The ReplicateTool has been updated to ask the user for approval of the generated image.
+    If the user rejects the image, the tool will automatically delete it and generate a new one
+    until the user approves. You don't need to handle this logic in your code - the tool takes care of it.
+
+    The tool will return a JSON string containing both the image_path and aspect_ratio of the approved image.
   expected_output: >
     A high-quality image that satisfies the technical and aesthetic requirements,
     accompanied by a log detailing generation parameters (including the aspect ratio used) and any quality assessments.
@@ -127,13 +144,20 @@ process_image:
   description: >
     Process the generated image to create multiple print-ready versions in standard sizes.
 
-    IMPORTANT: The image_generator now provides a JSON output with both the image path and aspect ratio.
-    You need to parse this JSON to extract both values. The output will look something like this:
+    IMPORTANT: The image_generator now provides a JSON string output with both the image path and aspect ratio.
+    You need to parse this JSON string to extract both values. The output will look something like this:
     ```
-    {
-      "image_path": "output/images/replicate_generated_1234567890.webp",
-      "aspect_ratio": "portrait" or "landscape"
-    }
+    '{"image_path": "output/images/replicate_generated_1234567890.webp", "aspect_ratio": "portrait"}'
+    ```
+
+    You must first parse this JSON string:
+    ```python
+    import json
+
+    # Parse the JSON string from the image_generator
+    image_data = json.loads(image_generator_output)
+    image_path = image_data["image_path"]
+    aspect_ratio = image_data["aspect_ratio"]
     ```
 
     DO NOT use the example paths shown in these instructions. You MUST extract the ACTUAL image path from the image_generator's output.
@@ -170,13 +194,20 @@ create_mockups:
     Generate high-fidelity product mockups that showcase the digital art in realistic, marketable contexts.
     IMPORTANT: Use the image generated by the image_generator agent (NOT the processed images).
 
-    The image_generator now provides a JSON output with both the image path and aspect ratio.
-    You need to parse this JSON to extract both values. The output will look something like this:
+    The image_generator now provides a JSON string output with both the image path and aspect ratio.
+    You need to parse this JSON string to extract both values. The output will look something like this:
     ```
-    {
-      "image_path": "output/images/replicate_generated_1234567890.webp",
-      "aspect_ratio": "portrait" or "landscape"
-    }
+    '{"image_path": "output/images/replicate_generated_1234567890.webp", "aspect_ratio": "portrait"}'
+    ```
+
+    You must first parse this JSON string:
+    ```python
+    import json
+
+    # Parse the JSON string from the image_generator
+    image_data = json.loads(image_generator_output)
+    image_path = image_data["image_path"]
+    aspect_ratio = image_data["aspect_ratio"]
     ```
 
     DO NOT use the example paths shown in these instructions. You MUST extract the ACTUAL image path from the image_generator's output.
@@ -210,6 +241,16 @@ create_listing:
   description: >
     Create a complete Etsy listing based on the generated concept, image, SEO research, and mockups.
     Compile all the information into a structured format suitable for the Etsy API.
+
+    IMPORTANT: The image_generator now provides a JSON string output with both the image path and aspect ratio.
+    If you need to use the original image path, you must first parse this JSON string:
+    ```python
+    import json
+
+    # Parse the JSON string from the image_generator
+    image_data = json.loads(image_generator_output)
+    image_path = image_data["image_path"]
+    ```
 
     IMPORTANT: Organize all files created in the workflow into a structured directory system:
 

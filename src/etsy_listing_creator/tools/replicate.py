@@ -7,7 +7,6 @@ import requests
 import json
 import shutil
 import base64
-import builtins
 
 from pydantic import Field, PrivateAttr
 from crewai.tools import BaseTool
@@ -68,7 +67,7 @@ class ReplicateTool(BaseTool):
 
     def _run(self, prompt: str, aspect_ratio: str = None) -> str:
         """
-        Generate an image using Replicate and ask for user approval.
+        Generate an image using Replicate.
 
         Args:
             prompt: Detailed description of the desired image
@@ -80,112 +79,78 @@ class ReplicateTool(BaseTool):
         print(f"Generating image with prompt: {prompt}")
         print(f"Using aspect ratio: {aspect_ratio or 'default (1:1)'}")
 
-        # Generate the image
-        image_path = self._generate_image(prompt, aspect_ratio)
-        
-        # Ask for user approval
-        print("\n===== IMAGE APPROVAL REQUIRED =====")
-        print(f"An image has been generated and saved to: {image_path}")
-        print("Please review the image and decide if you want to proceed with it.")
-        
-        while True:
-            user_response = input("Do you approve this image? (yes/no): ").strip().lower()
-            
-            if user_response in ["yes", "y"]:
-                print("Image approved! Continuing with the workflow.")
-                return image_path
-            elif user_response in ["no", "n"]:
-                print("Image rejected. Generating a new image...")
+        while True:  # Loop until user approves an image
+            # Prepare the input parameters
+            input_params = self._default_params.copy()
+            input_params["prompt"] = prompt
+
+            # Set the aspect ratio if provided
+            if aspect_ratio:
+                api_aspect_ratio = self._aspect_ratio_mapping.get(aspect_ratio)
+                if api_aspect_ratio:
+                    input_params["aspect_ratio"] = api_aspect_ratio
+                    print(f"Setting aspect ratio to: {api_aspect_ratio}")
+
+            try:
+                # Generate the image
+                print(f"Calling Replicate API with model: {self._model_id}")
+                output = replicate.run(self._model_id, input=input_params)
+
+                # The output can be a list of URLs, a string URL, or a FileOutput object
+                print(f"Output type: {type(output)}")
+                print(f"Output content: {output}")
+
+                # Process the output to get the image URL
+                image_url = None
+                if isinstance(output, list) and len(output) > 0:
+                    # If it's a list, take the first item
+                    image_url = output[0]
+                elif isinstance(output, str):
+                    # If it's a string, use it directly
+                    image_url = output
+                else:
+                    # Try to extract the URL from the object
+                    try:
+                        if hasattr(output, "url"):
+                            image_url = output.url
+                        elif hasattr(output, "image"):
+                            image_url = output.image
+                    except Exception as e:
+                        print(f"Error extracting URL from output: {e}")
+
+                if not image_url:
+                    raise ValueError("No image URL found in the output")
+
+                # Download the image
+                image_path = self._download_image(image_url)
                 
-                # Delete the rejected image
-                try:
-                    if os.path.exists(image_path):
+                # Ask for user approval
+                print("\n" + "="*50)
+                print(f"Image generated and saved to: {image_path}")
+                print("="*50)
+                user_response = input("Do you want to use this image? (yes/no): ").strip().lower()
+                
+                if user_response in ["yes", "y"]:
+                    print("Image approved! Continuing with the workflow...")
+                    # Return a JSON with both the image path and aspect ratio
+                    result = {
+                        "image_path": image_path,
+                        "aspect_ratio": aspect_ratio or "square"
+                    }
+                    return json.dumps(result)
+                else:
+                    print("Image rejected. Deleting and generating a new one...")
+                    # Delete the rejected image
+                    try:
                         os.remove(image_path)
                         print(f"Deleted rejected image: {image_path}")
-                except Exception as e:
-                    print(f"Warning: Could not delete rejected image: {str(e)}")
-                
-                # Generate a new image
-                image_path = self._generate_image(prompt, aspect_ratio)
-            else:
-                print("Invalid response. Please enter 'yes' or 'no'.")
-
-    def _generate_image(self, prompt: str, aspect_ratio: str = None) -> str:
-        """
-        Internal method to generate an image using Replicate.
-
-        Args:
-            prompt: Detailed description of the desired image
-            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default square)
-
-        Returns:
-            Path to the generated image file
-        """
-        # Prepare the input parameters
-        input_params = self._default_params.copy()
-        input_params["prompt"] = prompt
-
-        # Set the aspect ratio if provided
-        if aspect_ratio:
-            api_aspect_ratio = self._aspect_ratio_mapping.get(aspect_ratio)
-            if api_aspect_ratio:
-                input_params["aspect_ratio"] = api_aspect_ratio
-                print(f"Setting aspect ratio to: {api_aspect_ratio}")
-
-        try:
-            # Generate the image
-            print(f"Calling Replicate API with model: {self._model_id}")
-            output = replicate.run(self._model_id, input=input_params)
-
-            # The output can be a list of URLs, a string URL, or a FileOutput object
-            print(f"Output type: {type(output)}")
-            print(f"Output content: {output}")
-
-            # Handle different output types
-            if isinstance(output, list) and len(output) > 0:
-                image_url = output[0]
-                print(f"Image generated successfully. URL from list: {image_url}")
-                return self._download_image(image_url)
-            elif isinstance(output, str) and (
-                output.startswith("http://") or output.startswith("https://")
-            ):
-                # If it's a direct URL string
-                print(f"Image generated successfully. Direct URL: {output}")
-                return self._download_image(output)
-            elif hasattr(output, "url"):
-                # If it's a FileOutput object with a url attribute
-                image_url = output.url
-                print(f"Image generated successfully. URL from object: {image_url}")
-                return self._download_image(image_url)
-            elif hasattr(output, "download"):
-                # If it's a FileOutput object with a download method
-                print("Output has download method, using it directly")
-                # Generate a unique filename with timestamp
-                timestamp = int(time.time())
-                img_path = self._output_dir / f"replicate_generated_{timestamp}.webp"
-
-                # Download the file directly
-                output.download(str(img_path))
-
-                # Set file permissions to ensure it's readable and writable
-                os.chmod(
-                    img_path,
-                    stat.S_IRUSR
-                    | stat.S_IWUSR
-                    | stat.S_IRGRP
-                    | stat.S_IWGRP
-                    | stat.S_IROTH
-                    | stat.S_IWOTH,
-                )
-
-                print(f"✓ Image downloaded and saved to: {img_path}")
-                return str(img_path)
-            else:
-                raise ValueError(f"Unexpected output format from Replicate: {output}")
-
-        except Exception as e:
-            print(f"Error generating image: {str(e)}")
-            raise RuntimeError(f"Failed to generate image: {str(e)}")
+                    except Exception as e:
+                        print(f"Error deleting rejected image: {e}")
+                    # Continue the loop to generate a new image
+                    
+            except Exception as e:
+                print(f"Error generating image: {e}")
+                raise
 
     def _download_image(self, image_url: str) -> str:
         """

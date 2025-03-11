@@ -61,7 +61,7 @@ class JsonSaveTool(BaseTool):
             filename: Name of the file to save, can include subdirectories (e.g., "listing_dir/metadata/listing.json")
 
         Returns:
-            Path to the saved file
+            Path to the saved file or a rejection message
         """
         # Ensure the output directory exists
         self._output_dir.mkdir(parents=True, exist_ok=True)
@@ -87,6 +87,32 @@ class JsonSaveTool(BaseTool):
                 print(f"Error: {error_msg}")
                 raise TypeError(error_msg)
 
+        # Check if this is a concept file (idea generation)
+        is_concept = "concept_data.json" in filename
+        
+        if is_concept:
+            # Display the concept data in a readable format
+            print("\n" + "="*50)
+            print("GENERATED CONCEPT:")
+            print("="*50)
+            
+            # Format the concept data for better readability
+            if isinstance(json_data, dict):
+                for key, value in json_data.items():
+                    if key != "_filename":  # Skip internal fields
+                        print(f"{key.upper()}: {value}")
+            else:
+                print(json_data)
+                
+            print("="*50)
+            
+            # Ask for user approval
+            user_response = input("Do you want to use this concept? (yes/no): ").strip().lower()
+            
+            if user_response not in ["yes", "y"]:
+                print("Concept rejected. Returning rejection message...")
+                return "CONCEPT_REJECTED"
+
         # Normalize the filename to ensure consistent path handling
         # If filename starts with 'output/', remove it to prevent nesting
         if filename.startswith("output/"):
@@ -97,19 +123,17 @@ class JsonSaveTool(BaseTool):
         file_path = self._output_dir / filename
         print(f"Full file path: {file_path}")
 
+        # Create parent directories if they don't exist
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
         # Save the data
         try:
-            # Ensure parent directories exist
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            print(f"Created parent directories: {file_path.parent}")
-
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(json_data, f, indent=2, ensure_ascii=False)
-
+                json.dump(json_data, f, ensure_ascii=False, indent=2)
             print(f"✓ JSON data saved to: {file_path}")
             return str(file_path)
         except Exception as e:
-            error_msg = f"Failed to save JSON data: {str(e)}"
+            error_msg = f"Error saving JSON data: {str(e)}"
             print(f"Error: {error_msg}")
             raise RuntimeError(error_msg)
 
