@@ -177,6 +177,9 @@ class EtsyListingCreator:
 
 
 if __name__ == "__main__":
-    creator = EtsyListingCreator()
-    result = creator.create_listing()
-    print("Listing created successfully!")
+    count = int(input("How many listings do you want to create? "))
+    for i in range(count):
+        creator = EtsyListingCreator()
+        result = creator.create_listing()
+        print(f"Listing {i+1} created successfully!")
+    print("All listings created successfully!")
