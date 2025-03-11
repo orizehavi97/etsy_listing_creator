@@ -111,7 +111,6 @@ First, clone the repository to your local machine:
 ```bash
 # Clone the repository
 git clone https://github.com/orizehavi97/etsy-listing-creator.git
-# Replace 'username' with the actual GitHub username
 
 # Navigate to the project directory
 cd etsy-listing-creator
