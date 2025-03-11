@@ -33,51 +33,44 @@ class DynamicMockupTool(BaseTool):
     # Portrait-oriented templates (2:3 aspect ratio)
     _portrait_templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
-            "portrait-frame-mockup": {
-                "mockup_uuid": "88ad0ec7-4b34-4be4-a762-154d64229d07",
-                "smart_object_uuid": "89f5a078-8770-4cb8-9e53-acdd45663c76",
+            "1_p": {
+                "mockup_uuid": "fa9a9b28-2ed4-4e38-8b34-6968192b513b",
+                "smart_object_uuid": "b60eb5f7-e1c3-48aa-88ee-1a2b8e713c2b",
             },
-            "portrait-wall-art-mockup": {
-                "mockup_uuid": "efcfbd73-338c-46f2-a69c-439acd75d5c2",
-                "smart_object_uuid": "4f3ca126-a427-4360-89e2-4505d60479a7",
+            "2_p": {
+                "mockup_uuid": "0575ee59-47c2-4cb5-bb85-f6ef4295494d",
+                "smart_object_uuid": "90ba62ab-460e-4762-8c07-ff81f391f8e7",
             },
-            "portrait-canvas-print-mockup": {
-                "mockup_uuid": "54f260fc-215a-480e-81e0-5328936a5650",
-                "smart_object_uuid": "1efadc65-88ce-4d72-83e1-375a11400960",
+            "3_p": {
+                "mockup_uuid": "801e24ac-981f-4ba8-a70b-e39d0ba9bebf",
+                "smart_object_uuid": "ebbbdf68-b351-4f0f-8f1f-f65427d5dbff",
             },
-            "portrait-poster-mockup": {
-                "mockup_uuid": "5d47f14a-629b-49e8-9f8b-c27e5332f404",
-                "smart_object_uuid": "cd7919b0-a9c0-4ee0-851f-004102c60af8",
+            "4_p": {
+                "mockup_uuid": "1fc4c170-87aa-451c-9a10-5988d48b2b6d",
+                "smart_object_uuid": "cb7e2c6b-400f-4fd9-9b51-eae4681f5de3",
             },
-            "portrait-living-room-mockup": {
-                "mockup_uuid": "07bfe149-564c-4f50-bf7f-ae73f8bc870c",
-                "smart_object_uuid": "7f853dca-02f9-4e42-9eed-7bb227bc999e",
-            },
+
         }
     )
 
     # Landscape-oriented templates (3:2 aspect ratio)
     _landscape_templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
-            "landscape-frame-mockup": {
-                "mockup_uuid": "88ad0ec7-4b34-4be4-a762-154d64229d07",
-                "smart_object_uuid": "89f5a078-8770-4cb8-9e53-acdd45663c76",
+            "1_l": {
+                "mockup_uuid": "67ab2a9d-adee-4ff0-9e64-c897628a1d77",
+                "smart_object_uuid": "79608905-51fc-4b63-889d-c93dd6aa5784",
             },
-            "landscape-wall-art-mockup": {
-                "mockup_uuid": "efcfbd73-338c-46f2-a69c-439acd75d5c2",
-                "smart_object_uuid": "4f3ca126-a427-4360-89e2-4505d60479a7",
+            "2_l": {
+                "mockup_uuid": "64e30038-8554-4290-acdf-530c5f77c146",
+                "smart_object_uuid": "377b3c81-618d-437b-a179-44afb1d83347",
             },
-            "landscape-canvas-print-mockup": {
-                "mockup_uuid": "54f260fc-215a-480e-81e0-5328936a5650",
-                "smart_object_uuid": "1efadc65-88ce-4d72-83e1-375a11400960",
+            "3_l": {
+                "mockup_uuid": "ce75acf7-ff28-4976-9ac1-354359d4b87e",
+                "smart_object_uuid": "410cdf57-4f0e-4b4d-b4a6-2cf09b28e87e",
             },
-            "landscape-poster-mockup": {
-                "mockup_uuid": "5d47f14a-629b-49e8-9f8b-c27e5332f404",
-                "smart_object_uuid": "cd7919b0-a9c0-4ee0-851f-004102c60af8",
-            },
-            "landscape-living-room-mockup": {
-                "mockup_uuid": "07bfe149-564c-4f50-bf7f-ae73f8bc870c",
-                "smart_object_uuid": "7f853dca-02f9-4e42-9eed-7bb227bc999e",
+            "4_l": {
+                "mockup_uuid": "051c159e-9a1e-4b22-a1be-79cc4e074a85",
+                "smart_object_uuid": "9342e55c-71ce-4e06-bb98-3e90615522f2",
             },
         }
     )
