@@ -7,6 +7,7 @@ import requests
 import json
 import shutil
 import base64
+import builtins
 
 from pydantic import Field, PrivateAttr
 from crewai.tools import BaseTool
@@ -67,7 +68,7 @@ class ReplicateTool(BaseTool):
 
     def _run(self, prompt: str, aspect_ratio: str = None) -> str:
         """
-        Generate an image using Replicate.
+        Generate an image using Replicate and ask for user approval.
 
         Args:
             prompt: Detailed description of the desired image
@@ -79,6 +80,47 @@ class ReplicateTool(BaseTool):
         print(f"Generating image with prompt: {prompt}")
         print(f"Using aspect ratio: {aspect_ratio or 'default (1:1)'}")
 
+        # Generate the image
+        image_path = self._generate_image(prompt, aspect_ratio)
+        
+        # Ask for user approval
+        print("\n===== IMAGE APPROVAL REQUIRED =====")
+        print(f"An image has been generated and saved to: {image_path}")
+        print("Please review the image and decide if you want to proceed with it.")
+        
+        while True:
+            user_response = input("Do you approve this image? (yes/no): ").strip().lower()
+            
+            if user_response in ["yes", "y"]:
+                print("Image approved! Continuing with the workflow.")
+                return image_path
+            elif user_response in ["no", "n"]:
+                print("Image rejected. Generating a new image...")
+                
+                # Delete the rejected image
+                try:
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
+                        print(f"Deleted rejected image: {image_path}")
+                except Exception as e:
+                    print(f"Warning: Could not delete rejected image: {str(e)}")
+                
+                # Generate a new image
+                image_path = self._generate_image(prompt, aspect_ratio)
+            else:
+                print("Invalid response. Please enter 'yes' or 'no'.")
+
+    def _generate_image(self, prompt: str, aspect_ratio: str = None) -> str:
+        """
+        Internal method to generate an image using Replicate.
+
+        Args:
+            prompt: Detailed description of the desired image
+            aspect_ratio: The aspect ratio to use ('portrait', 'landscape', or None for default square)
+
+        Returns:
+            Path to the generated image file
+        """
         # Prepare the input parameters
         input_params = self._default_params.copy()
         input_params["prompt"] = prompt
