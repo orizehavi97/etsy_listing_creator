@@ -30,7 +30,7 @@ class DynamicMockupTool(BaseTool):
     _output_dir: Path = PrivateAttr()
     _base_url: str = PrivateAttr(default="https://app.dynamicmockups.com/api/v1")
 
-    # Portrait-oriented templates (2:3 aspect ratio)
+    # Portrait-oriented templates (3:4 aspect ratio)
     _portrait_templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
             "1_p": {
@@ -53,7 +53,7 @@ class DynamicMockupTool(BaseTool):
         }
     )
 
-    # Landscape-oriented templates (3:2 aspect ratio)
+    # Landscape-oriented templates (4:3 aspect ratio)
     _landscape_templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
             "1_l": {
@@ -123,10 +123,10 @@ class DynamicMockupTool(BaseTool):
             Dictionary of templates appropriate for the aspect ratio
         """
         if aspect_ratio == "portrait":
-            print("Using portrait-oriented templates (2:3 aspect ratio)")
+            print("Using portrait-oriented templates (3:4 aspect ratio)")
             return self._portrait_templates
         elif aspect_ratio == "landscape":
-            print("Using landscape-oriented templates (3:2 aspect ratio)")
+            print("Using landscape-oriented templates (4:3 aspect ratio)")
             return self._landscape_templates
         else:
             print("Using default templates (no specific aspect ratio)")
@@ -333,6 +333,12 @@ class DynamicMockupTool(BaseTool):
                         {
                             "uuid": uuids["smart_object_uuid"],
                             "asset": {"url": image_url},
+                            "position": {
+                                "x": 0.5,  # Center horizontally (0.5 = 50%)
+                                "y": 0.5,  # Center vertically (0.5 = 50%)
+                                "scale": 1.0,  # Maintain original scale
+                                "rotation": 0  # No rotation
+                            }
                         }
                     ],
                 }

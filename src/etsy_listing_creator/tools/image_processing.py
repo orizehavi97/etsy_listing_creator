@@ -129,7 +129,7 @@ class ImageProcessingTool(BaseTool):
         temp_dir.mkdir(parents=True, exist_ok=True)
         
         # Create a fallback image
-        fallback_path = temp_dir / "fallback_image.png"
+        fallback_path = temp_dir / "fallback_image.jpg"
         
         # Create a simple gradient image
         width, height = 1200, 1800  # 4x6 inches at 300 DPI
@@ -332,7 +332,7 @@ class ImageProcessingTool(BaseTool):
 
         Args:
             image: Image to enhance
-            preserve_colors: If True, will minimize color adjustments to preserve original colors.
+            preserve_colors: If True, will only apply sharpening to preserve original colors.
                             If False, will apply standard enhancements for print.
 
         Returns:
@@ -354,15 +354,6 @@ class ImageProcessingTool(BaseTool):
             # Enhance brightness
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(1.05)  # Increase brightness by 5%
-        else:
-            # Minimal adjustments to preserve original colors
-            # Very slight contrast adjustment for print clarity
-            enhancer = ImageEnhance.Contrast(image)
-            image = enhancer.enhance(1.05)  # Minimal contrast increase (5%)
-            
-            # No color saturation adjustment to preserve original colors
-            
-            # No brightness adjustment to preserve original colors
         
         return image
 
@@ -434,13 +425,13 @@ class ImageProcessingTool(BaseTool):
             
             # Create output filename if not provided
             if not output_filename:
-                output_filename = f"print_{size_name}.png"
+                output_filename = f"print_{size_name}.jpg"
             
             # Create output path
             output_path = self._output_dir / output_filename
             
             # Save the image
-            result.save(output_path, "PNG", dpi=(300, 300))
+            result.save(output_path, "JPEG", dpi=(300, 300))
             
             print(f"✓ Prepared image for print size {size_name}: {output_path}")
             return str(output_path)

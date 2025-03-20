@@ -47,7 +47,7 @@ class ReplicateTool(BaseTool):
 
     # Mapping of aspect ratio names to API values
     _aspect_ratio_mapping: Dict[str, str] = PrivateAttr(
-        default={"portrait": "2:3", "landscape": "3:2", None: "1:1"}  # Default square
+        default={"portrait": "3:4", "landscape": "4:3", None: "1:1"}  # Default square
     )
 
     def __init__(self, model_id: Optional[str] = None, **kwargs):

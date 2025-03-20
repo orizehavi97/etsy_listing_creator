@@ -163,7 +163,7 @@ The script will create a new organized directory with all listing files in the `
 
 ## 📝 Notes
 
-- The system intelligently handles both portrait (2:3) and landscape (3:2) aspect ratios.
+- The system intelligently handles both portrait (3:4) and landscape (4:3) aspect ratios.
 - Print sizes are automatically adjusted based on the aspect ratio.
 - All files are organized into a structured directory system for easy management.
 - The workflow is designed to be run in sequence, with each step building on the previous one.
@@ -229,7 +229,6 @@ Contributions are welcome! Here's how you can contribute to the project:
 - Use the GitHub issue tracker to report bugs
 - Describe the bug in detail including steps to reproduce
 - Include information about your environment (OS, Python version, etc.)
-
 
 ### Feature Requests
 

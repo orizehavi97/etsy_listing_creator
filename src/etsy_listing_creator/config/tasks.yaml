@@ -1,10 +1,10 @@
 generate_concept:
   description: >
-    Generate a unique, innovative, eye-catching and marketable digital art concept.
+    Generate a unique, innovative, eye-catching and marketable wall art concept.
     Your output should include a detailed breakdown of the concept with explicit elements such as:
-      - Composition elements in short details
-      - Narrative or thematic elements that resonate with a specific target audience.
-      - Determine the best aspect ratio for this concept: "portrait" (2:3) or "landscape" (3:2)
+      - 5-7 Composition elements in short details, do not use surrealism, be creative, specific and unique
+      - 3-5 Narrative or thematic elements that resonate with a specific target audience.
+      - Determine the best aspect ratio for this concept: "portrait" (3:4) or "landscape" (4:3)
         based on the composition and visual impact of the concept.
     Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", and "aspect_ratio".
     For aspect_ratio, specify either "portrait" or "landscape" based on which would best showcase the concept.
@@ -23,9 +23,9 @@ generate_concept:
     while True:
         # Generate your concept
         your_concept_json_object = {
-            "style": "Your generated style",
-            "theme": "Your generated theme",
-            "target_audience": "Your identified target audience",
+            "style": "Your detailed generated style",
+            "theme": "Your detailed generated theme",
+            "target_audience": "Your detailed identified target audience",
             "aspect_ratio": "portrait" or "landscape"
         }
         
@@ -56,9 +56,8 @@ create_prompt:
     Transform the previous art concept into a highly detailed, structured prompt for Stability AI's Flux model: 
     Details: [Brief, vivid description of key elements of the concept]
     Style: hyper-realistic, digital watercolor, minimalist (choose one or combine as needed)
-    Use concise, comma-separated phrases for optimal T5/CLIP parsing. 
     Stick to indigo blue and honey orange colors theme since it's our shops niche
-    Make sure to include "Style of TOK, indigo blue and honey orange colors" at the end of the prompt as plain text
+    Make sure to include "Style of TOK, wall art design, indigo blue and honey orange colors" at the end of the prompt as plain text
 
     IMPORTANT: Extract the aspect_ratio from the concept (either "portrait" or "landscape") and include it in your output.
     Your output should be a JSON object with two keys:
@@ -165,8 +164,8 @@ process_image:
 
     Steps include:
       - Automatically generating 5 standard print sizes based on the aspect ratio:
-        - For portrait (2:3): 4x6", 5x7", 8x10", 11x14", 16x20"
-        - For landscape (3:2): 6x4", 7x5", 10x8", 14x11", 20x16"
+        - For portrait (3:4): 4x6", 5x7", 8x10", 11x14", 16x20"
+        - For landscape (4:3): 6x4", 7x5", 10x8", 14x11", 20x16"
       - Maintaining aspect ratio while upscaling to each target dimension.
       - Ensuring 300 DPI resolution for all sizes.
       - Applying HDR and sharpness enhancements for optimal print quality.
