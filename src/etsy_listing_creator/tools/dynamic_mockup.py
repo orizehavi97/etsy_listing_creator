@@ -154,7 +154,26 @@ class DynamicMockupTool(BaseTool):
 
         selected_templates = {}
         for name in template_names:
-            if name in templates:
+            # Convert descriptive names to numbered templates
+            if aspect_ratio == "landscape":
+                if name == "landscape-frame-mockup":
+                    selected_templates["1_l"] = templates["1_l"]
+                elif name == "landscape-wall-art-mockup":
+                    selected_templates["2_l"] = templates["2_l"]
+                elif name == "landscape-canvas-print-mockup":
+                    selected_templates["3_l"] = templates["3_l"]
+                elif name == "landscape-poster-mockup":
+                    selected_templates["4_l"] = templates["4_l"]
+            elif aspect_ratio == "portrait":
+                if name == "portrait-frame-mockup":
+                    selected_templates["1_p"] = templates["1_p"]
+                elif name == "portrait-wall-art-mockup":
+                    selected_templates["2_p"] = templates["2_p"]
+                elif name == "portrait-canvas-print-mockup":
+                    selected_templates["3_p"] = templates["3_p"]
+                elif name == "portrait-poster-mockup":
+                    selected_templates["4_p"] = templates["4_p"]
+            elif name in templates:
                 selected_templates[name] = templates[name]
             else:
                 print(

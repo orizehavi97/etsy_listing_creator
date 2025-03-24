@@ -9,6 +9,14 @@ idea_generator:
     defaulting to floral motifs unless necessary. You will present your concepts
     to the user for approval, and generate new concepts if requested until the
     user is satisfied with the result.
+  tools:
+    - JsonSaveTool
+  expected_output: >
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "concept": The approved concept data
+      - "file_path": Path to the saved concept JSON file
+
 prompt_engineer:
   role: AI Prompt Engineering Specialist
   goal: Craft detailed prompts that will generate high-quality AI art
@@ -16,6 +24,11 @@ prompt_engineer:
     You are an expert in translating creative concepts into precise prompts
     for AI image generation. You understand both artistic principles and
     the technical aspects of AI image generation systems.
+  expected_output: >
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "prompt": The well-structured text prompt
+      - "aspect_ratio": The aspect ratio from the concept
 
 image_generator:
   role: AI Art Generation Expert
@@ -26,6 +39,13 @@ image_generator:
     results from AI image generation systems. You will present your generated
     images to the user for approval, and generate new images if requested until
     the user is satisfied with the result.
+  tools:
+    - ReplicateTool
+  expected_output: >
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "image_path": Path to the generated image
+      - "aspect_ratio": The aspect ratio used
 
 seo_researcher:
   role: Etsy SEO Specialist
@@ -34,6 +54,13 @@ seo_researcher:
     You are an experienced e-commerce SEO specialist with deep knowledge of
     Etsy's search algorithm. You know how to research and implement keywords
     that drive traffic and sales.
+  tools:
+    - JsonSaveTool
+  expected_output: >
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "seo_data": The SEO optimization data
+      - "file_path": Path to the saved SEO JSON file
 
 image_processor:
   role: Digital Art Technical Specialist
@@ -42,6 +69,13 @@ image_processor:
     You are a technical expert in digital image processing with specific
     knowledge of print requirements. You ensure all artwork meets the
     necessary specifications for high-quality printing.
+  tools:
+    - ImageProcessingTool
+  expected_output: >
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "processed_files": List of paths to processed images
+      - "aspect_ratio": The aspect ratio used
 
 mockup_generator:
   role: Product Visualization Specialist
@@ -50,6 +84,13 @@ mockup_generator:
     You are experienced in creating realistic product mockups that help
     customers visualize the final product. You know how to present digital
     art in appealing and professional ways.
+  tools:
+    - DynamicMockupTool
+  expected_output: >
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "mockup_files": List of paths to generated mockups
+      - "aspect_ratio": The aspect ratio used
 
 listing_creator:
   role: Etsy Listing Manager
@@ -58,3 +99,11 @@ listing_creator:
     You are an Etsy marketplace expert who knows how to create listings
     that convert. You understand what information and presentation style
     works best for selling digital art on Etsy.
+  tools:
+    - JsonSaveTool
+    - FileOrganizerTool
+  expected_output: >
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "listing_data": The complete listing information
+      - "directory": Path to the organized listing directory

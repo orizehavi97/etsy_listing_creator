@@ -2,12 +2,18 @@ import os
 import shutil
 import time
 import json
+import hashlib
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Any
+import logging
+from datetime import datetime
 
-from pydantic import PrivateAttr, Field
+from pydantic import PrivateAttr, Field, validator
 from crewai.tools import BaseTool
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class FileOrganizerTool(BaseTool):
     name: str = "File Organizer Tool"
@@ -15,6 +21,7 @@ class FileOrganizerTool(BaseTool):
     Organize files into a structured directory system for Etsy listings.
     
     This tool helps create a directory structure and copy files to appropriate locations.
+    It includes validation, error handling, and backup capabilities.
     
     Input should be a JSON object with the following structure:
     {
@@ -26,13 +33,15 @@ class FileOrganizerTool(BaseTool):
         "mockups": ["path/to/mockup1.png", "path/to/mockup2.png"],
         "metadata": ["path/to/metadata.json"]
       },
-      "cleanup": true  # Optional: Whether to delete original files after copying (default: true)
+      "cleanup": true,  # Optional: Whether to delete original files after copying (default: true)
+      "backup": true,   # Optional: Whether to create backups before cleanup (default: true)
+      "validate": true  # Optional: Whether to validate files before organizing (default: true)
     }
     
     Returns the path to the organized directory structure.
     """
 
-    # Define the schema for the tool inputs - make them Optional for initialization
+    # Define the schema for the tool inputs
     listing_name: Optional[str] = Field(
         default=None, description="A descriptive name for the listing"
     )
@@ -42,9 +51,17 @@ class FileOrganizerTool(BaseTool):
     cleanup: bool = Field(
         default=True, description="Whether to delete original files after copying"
     )
+    backup: bool = Field(
+        default=True, description="Whether to create backups before cleanup"
+    )
+    should_validate: bool = Field(
+        default=True, description="Whether to validate files before organizing"
+    )
 
-    # Private attributes using Pydantic's PrivateAttr
+    # Private attributes
     _output_dir: Path = PrivateAttr()
+    _backup_dir: Path = PrivateAttr()
+    _allowed_extensions: Dict[str, List[str]] = PrivateAttr()
 
     def __init__(self, **kwargs):
         """Initialize the FileOrganizerTool."""
@@ -53,27 +70,81 @@ class FileOrganizerTool(BaseTool):
 
         super().__init__(**kwargs)
         self._output_dir = Path(output_dir)
+        self._backup_dir = self._output_dir / "backups"
+        
+        # Define allowed file extensions for each category
+        self._allowed_extensions = {
+            "concept": [".json"],
+            "original": [".png", ".jpg", ".jpeg", ".webp"],
+            "prints": [".png", ".jpg", ".jpeg", ".webp"],
+            "mockups": [".png", ".jpg", ".jpeg", ".webp"],
+            "metadata": [".json"]
+        }
 
-        # Ensure the output directory exists
+        # Ensure directories exist
         os.makedirs(self._output_dir, exist_ok=True)
+        os.makedirs(self._backup_dir, exist_ok=True)
 
-        print(
-            f"FileOrganizerTool initialized with output directory: {self._output_dir}"
-        )
+        logger.info(f"FileOrganizerTool initialized with output directory: {self._output_dir}")
+
+    def _calculate_file_hash(self, file_path: str) -> str:
+        """Calculate SHA-256 hash of a file."""
+        sha256_hash = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+
+    def _validate_file(self, file_path: str, category: str) -> bool:
+        """Validate a file based on its category and type."""
+        if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
+            return False
+
+        # Check file extension
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext not in self._allowed_extensions.get(category, []):
+            logger.error(f"Invalid file extension for {category}: {ext}")
+            return False
+
+        # Check file size (max 50MB)
+        if os.path.getsize(file_path) > 50 * 1024 * 1024:
+            logger.error(f"File too large: {file_path}")
+            return False
+
+        return True
+
+    def _create_backup(self, file_path: str) -> Optional[str]:
+        """Create a backup of a file."""
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_name = f"{os.path.basename(file_path)}_{timestamp}"
+            backup_path = self._backup_dir / backup_name
+            
+            shutil.copy2(file_path, backup_path)
+            logger.info(f"Created backup: {backup_path}")
+            return str(backup_path)
+        except Exception as e:
+            logger.error(f"Failed to create backup for {file_path}: {str(e)}")
+            return None
 
     def _run(
         self,
         listing_name: str,
         files: Dict[str, List[str]],
         cleanup: bool = True,
+        backup: bool = True,
+        should_validate: bool = True,
     ) -> str:
         """
         Organize files into a structured directory system.
 
         Args:
-            listing_name: A descriptive name for the listing (used in directory name)
+            listing_name: A descriptive name for the listing
             files: Dictionary mapping categories to lists of file paths
-            cleanup: Whether to delete the original files after copying (defaults to True)
+            cleanup: Whether to delete original files after copying
+            backup: Whether to create backups before cleanup
+            should_validate: Whether to validate files before organizing
 
         Returns:
             Path to the organized directory structure
@@ -81,7 +152,7 @@ class FileOrganizerTool(BaseTool):
         # Generate timestamp for unique directory
         timestamp = int(time.time())
 
-        # Sanitize listing name for use in directory name
+        # Sanitize listing name
         safe_name = "".join(
             c if c.isalnum() or c in [" ", "_", "-"] else "_" for c in listing_name
         )
@@ -91,36 +162,50 @@ class FileOrganizerTool(BaseTool):
         listing_dir = self._output_dir / f"listing_{safe_name}_{timestamp}"
         os.makedirs(listing_dir, exist_ok=True)
 
-        print(f"Created listing directory: {listing_dir}")
+        logger.info(f"Created listing directory: {listing_dir}")
 
         # Create subdirectories
         for category in ["concept", "original", "prints", "mockups", "metadata"]:
             os.makedirs(listing_dir / category, exist_ok=True)
 
         # Copy files to appropriate directories
-        manifest = {"timestamp": timestamp, "listing_name": listing_name, "files": {}}
+        manifest = {
+            "timestamp": timestamp,
+            "listing_name": listing_name,
+            "files": {},
+            "backups": {},
+            "validation": {}
+        }
 
         # Keep track of files to delete if cleanup is enabled
         files_to_delete = []
         missing_files = []
+        validation_errors = []
 
         for category, file_paths in files.items():
             if category not in manifest["files"]:
                 manifest["files"][category] = []
 
             if not file_paths:
-                print(f"Warning: No files provided for category: {category}")
+                logger.warning(f"No files provided for category: {category}")
                 continue
 
             for file_path in file_paths:
                 if not file_path:
-                    print(f"Warning: Empty file path provided for category: {category}")
+                    logger.warning(f"Empty file path provided for category: {category}")
                     continue
                 
-                if not os.path.exists(file_path):
-                    print(f"Warning: File not found: {file_path} (category: {category})")
-                    missing_files.append((category, file_path))
+                # Validate file if enabled
+                if should_validate and not self._validate_file(file_path, category):
+                    validation_errors.append((category, file_path))
                     continue
+
+                # Create backup if enabled
+                backup_path = None
+                if backup:
+                    backup_path = self._create_backup(file_path)
+                    if backup_path:
+                        manifest["backups"][file_path] = backup_path
 
                 # Get the filename from the path
                 filename = os.path.basename(file_path)
@@ -135,38 +220,55 @@ class FileOrganizerTool(BaseTool):
                 try:
                     # Copy the file
                     shutil.copy2(file_path, dest_path)
-                    print(f"Copied {file_path} to {dest_path}")
+                    logger.info(f"Copied {file_path} to {dest_path}")
 
-                    # Add to manifest
-                    manifest["files"][category].append(str(dest_path))
+                    # Calculate file hash
+                    file_hash = self._calculate_file_hash(dest_path)
+
+                    # Add to manifest with metadata
+                    manifest["files"][category].append({
+                        "original_path": file_path,
+                        "organized_path": str(dest_path),
+                        "hash": file_hash,
+                        "size": os.path.getsize(dest_path),
+                        "timestamp": datetime.now().isoformat()
+                    })
 
                     # Add to list of files to delete if cleanup is enabled
                     if cleanup and os.path.exists(file_path):
                         files_to_delete.append(file_path)
                 except Exception as e:
-                    print(f"Error copying {file_path}: {str(e)}")
+                    logger.error(f"Error copying {file_path}: {str(e)}")
 
-        # If there were missing files, add them to the manifest
+        # Add validation and missing files to manifest
+        if validation_errors:
+            manifest["validation"]["errors"] = [
+                {"category": cat, "path": path} for cat, path in validation_errors
+            ]
+            logger.warning(f"Validation errors found: {len(validation_errors)} files")
+
         if missing_files:
-            manifest["missing_files"] = [{"category": cat, "path": path} for cat, path in missing_files]
-            print(f"Warning: {len(missing_files)} files were not found and could not be copied.")
+            manifest["missing_files"] = [
+                {"category": cat, "path": path} for cat, path in missing_files
+            ]
+            logger.warning(f"Missing files: {len(missing_files)} files")
 
         # Save manifest
         manifest_path = listing_dir / "manifest.json"
         with open(manifest_path, "w") as f:
             json.dump(manifest, f, indent=2)
 
-        print(f"Saved manifest to {manifest_path}")
+        logger.info(f"Saved manifest to {manifest_path}")
 
         # Clean up original files if requested
         if cleanup and files_to_delete:
-            print(f"Cleaning up {len(files_to_delete)} original files...")
+            logger.info(f"Cleaning up {len(files_to_delete)} original files...")
             for file_path in files_to_delete:
                 try:
                     os.remove(file_path)
-                    print(f"Deleted original file: {file_path}")
+                    logger.info(f"Deleted original file: {file_path}")
                 except Exception as e:
-                    print(f"Error deleting file {file_path}: {str(e)}")
+                    logger.error(f"Error deleting file {file_path}: {str(e)}")
 
         # Return the path to the organized directory
         return str(listing_dir)
@@ -182,30 +284,11 @@ class FileOrganizerTool(BaseTool):
             Dictionary with only existing files
         """
         verified_files = {}
-        missing_files = []
-        
         for category, file_paths in files.items():
-            verified_files[category] = []
-            
-            if not file_paths:
-                print(f"Warning: No files provided for category: {category}")
-                continue
-                
-            for file_path in file_paths:
-                if not file_path:
-                    print(f"Warning: Empty file path provided for category: {category}")
-                    continue
-                    
-                if os.path.exists(file_path):
-                    verified_files[category].append(file_path)
-                    print(f"Verified file exists: {file_path} (category: {category})")
-                else:
-                    missing_files.append((category, file_path))
-                    print(f"Warning: File not found: {file_path} (category: {category})")
-        
-        if missing_files:
-            print(f"Warning: {len(missing_files)} files were not found and will be skipped.")
-            
+            verified_files[category] = [
+                path for path in file_paths
+                if os.path.exists(path)
+            ]
         return verified_files
 
     def run(self, input_data: Union[str, Dict[str, Any]]) -> str:
@@ -241,6 +324,8 @@ class FileOrganizerTool(BaseTool):
         listing_name = input_data["listing_name"]
         files = input_data["files"]
         cleanup = input_data.get("cleanup", True)
+        backup = input_data.get("backup", True)
+        validate = input_data.get("validate", True)
         
         # Check for critical files
         critical_categories = ["concept", "metadata"]
@@ -248,36 +333,42 @@ class FileOrganizerTool(BaseTool):
         
         for category in critical_categories:
             if category not in files or not files[category]:
-                print(f"Warning: No files provided for critical category: {category}")
+                logger.warning(f"No files provided for critical category: {category}")
                 
                 # Check if the default files exist
                 if category == "concept":
                     default_path = "output/concept_data.json"
                     if os.path.exists(default_path):
-                        print(f"Found default concept file at: {default_path}")
+                        logger.info(f"Found default concept file at: {default_path}")
                         if category not in files:
                             files[category] = []
                         files[category].append(default_path)
                     else:
-                        print(f"Critical file not found: {default_path}")
+                        logger.error(f"Critical file not found: {default_path}")
                         missing_critical = True
                         
                 elif category == "metadata":
                     default_path = "output/seo_data.json"
                     if os.path.exists(default_path):
-                        print(f"Found default SEO file at: {default_path}")
+                        logger.info(f"Found default SEO file at: {default_path}")
                         if category not in files:
                             files[category] = []
                         files[category].append(default_path)
                     else:
-                        print(f"Critical file not found: {default_path}")
+                        logger.error(f"Critical file not found: {default_path}")
                         missing_critical = True
         
         if missing_critical:
-            print("Warning: Critical files are missing. The organization may be incomplete.")
+            logger.warning("Critical files are missing. The organization may be incomplete.")
         
         # Verify files exist before organizing
         verified_files = self._verify_files(files)
         
         # Run the tool
-        return self._run(listing_name=listing_name, files=verified_files, cleanup=cleanup)
+        return self._run(
+            listing_name=listing_name,
+            files=verified_files,
+            cleanup=cleanup,
+            backup=backup,
+            should_validate=validate
+        )

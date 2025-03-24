@@ -18,9 +18,9 @@ generate_concept:
     from etsy_listing_creator.tools import JsonSaveTool
 
     json_saver = JsonSaveTool()
+    concept_approved = False
 
-    # Keep generating concepts until the user approves
-    while True:
+    while not concept_approved:
         # Generate your concept
         your_concept_json_object = {
             "style": "Your detailed generated style",
@@ -35,20 +35,29 @@ generate_concept:
             "filename": "output/concept_data.json"
         })
         
-        # If the user approved the concept, break the loop
+        # If the user approved the concept, mark as approved and break the loop
         if result != "CONCEPT_REJECTED":
+            concept_approved = True
             concept_json_path = result
             break
         
         # If we're here, the user rejected the concept, so generate a new one
         print("Generating a new concept based on user feedback...")
+
+    # Return the approved concept data
+    return {
+        "status": "success",
+        "concept": your_concept_json_object,
+        "file_path": concept_json_path
+    }
     ```
 
     Make sure to include the saved file path in your response so it can be used by subsequent tasks.
   expected_output: >
-    A comprehensive JSON-formatted description of the art concept including detailed keys for style, theme, target_audience, variations,
-    and aspect_ratio (either "portrait" or "landscape"), alongside a brief narrative explanation of the concept.
-    The concept should be saved to a JSON file and the path to this file should be included in the response.
+    A JSON object containing:
+      - "status": "success" or "error"
+      - "concept": The approved concept data
+      - "file_path": Path to the saved concept JSON file
   agent: idea_generator
 
 create_prompt:

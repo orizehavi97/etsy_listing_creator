@@ -74,36 +74,26 @@ class EtsyListingCreator:
             )
 
         # Set up task dependencies to ensure proper data flow
-        # The prompt engineer should use the output from the idea generator
-        if "create_prompt" in tasks and "generate_concept" in tasks:
-            tasks["create_prompt"].context = [tasks["generate_concept"]]
-
-        # The image generator should use the output from the prompt engineer
-        if "generate_image" in tasks and "create_prompt" in tasks:
-            tasks["generate_image"].context = [tasks["create_prompt"]]
-
-        # The mockup generator should use the output from the image generator
-        if "create_mockups" in tasks and "generate_image" in tasks:
-            tasks["create_mockups"].context = [tasks["generate_image"]]
-
-        # If image processor is enabled, it should use the output from the image generator
-        if "process_image" in tasks and "generate_image" in tasks:
-            tasks["process_image"].context = [tasks["generate_image"]]
-
-        # The listing creator should use outputs from all previous tasks
-        if "create_listing" in tasks:
-            context_tasks = []
-            for task_id in [
+        task_dependencies = {
+            "create_prompt": ["generate_concept"],
+            "generate_image": ["create_prompt"],
+            "process_image": ["generate_image"],
+            "create_mockups": ["generate_image"],
+            "research_seo": ["generate_concept"],
+            "create_listing": [
                 "generate_concept",
                 "create_prompt",
                 "generate_image",
                 "research_seo",
                 "process_image",
-                "create_mockups",
-            ]:
-                if task_id in tasks:
-                    context_tasks.append(tasks[task_id])
-            tasks["create_listing"].context = context_tasks
+                "create_mockups"
+            ]
+        }
+
+        # Apply dependencies
+        for task_id, dependencies in task_dependencies.items():
+            if task_id in tasks:
+                tasks[task_id].context = [tasks[dep] for dep in dependencies if dep in tasks]
 
         return tasks
 
@@ -131,49 +121,32 @@ class EtsyListingCreator:
         result = crew.kickoff()
         print(f"Crew workflow completed with result: {result}")
 
-        # Check if the result contains a path to the organized directory
-        if isinstance(result, str):
-            # Handle both old format (direct path to listing.json) and new format (directory path)
+        # Handle the result based on its type
+        if isinstance(result, dict):
+            # If result is already a dictionary, return it
+            return result
+        elif isinstance(result, str):
+            # Handle string results (file paths)
             if "output/listing.json" in result:
                 json_path = result
-                print(f"Listing saved to: {json_path}")
             elif "listing_" in result and "/metadata/listing.json" not in result:
-                # This is likely a directory path from the FileOrganizerTool
                 json_path = os.path.join(result, "metadata", "listing.json")
-                print(f"Listing directory created at: {result}")
-                print(f"Listing JSON expected at: {json_path}")
             else:
-                # This might be a full path to the listing.json in the new structure
                 json_path = result
-                print(f"Listing saved to: {json_path}")
 
-            # Optionally, load and return the JSON data
+            # Load and return the JSON data if it exists
             try:
                 if os.path.exists(json_path):
-                    print(f"Loading JSON data from: {json_path}")
                     with open(json_path, "r", encoding="utf-8") as f:
-                        json_data = json.load(f)
-                    return json_data
+                        return json.load(f)
                 else:
                     print(f"Warning: JSON file not found at {json_path}")
-                    
-                    # Check if the concept and SEO files were created
-                    concept_path = os.path.join("output", "concept_data.json")
-                    seo_path = os.path.join("output", "seo_data.json")
-                    
-                    if os.path.exists(concept_path):
-                        print(f"Concept file exists at: {concept_path}")
-                    else:
-                        print(f"Warning: Concept file not found at {concept_path}")
-                        
-                    if os.path.exists(seo_path):
-                        print(f"SEO file exists at: {seo_path}")
-                    else:
-                        print(f"Warning: SEO file not found at {seo_path}")
+                    return {"status": "error", "message": "Listing JSON not found"}
             except Exception as e:
-                print(f"Warning: Could not load the saved JSON file: {str(e)}")
-
-        return result
+                print(f"Error loading JSON file: {str(e)}")
+                return {"status": "error", "message": str(e)}
+        else:
+            return {"status": "error", "message": "Unexpected result type"}
 
 
 if __name__ == "__main__":
