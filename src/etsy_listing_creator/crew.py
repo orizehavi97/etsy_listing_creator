@@ -79,7 +79,7 @@ class EtsyListingCreator:
             "generate_image": ["create_prompt"],
             "process_image": ["generate_image"],
             "create_mockups": ["generate_image"],
-            "research_seo": ["generate_concept"],
+            "research_seo": ["create_prompt"],
             "create_listing": [
                 "generate_concept",
                 "create_prompt",

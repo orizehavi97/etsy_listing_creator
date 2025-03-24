@@ -24,24 +24,24 @@ The system follows a **sequential CrewAI workflow**, where different agents hand
 ### **Workflow Steps**
 
 1️⃣ **Concept Generation** → Generate creative art concepts with aspect ratio determination and user approval.  
-2️⃣ **Prompt Engineering** → Craft high-quality AI prompts with aspect ratio preservation.  
+2️⃣ **Prompt Engineering** → Craft high-quality AI prompts with aspect ratio preservation and JSON saving.  
 3️⃣ **AI Image Generation** → Create an image with Replicate AI using the specified aspect ratio and user approval.  
-4️⃣ **SEO Research** → Generate title, tags, and description optimized for Etsy search.  
+4️⃣ **SEO Research** → Generate title, tags, and description optimized for Etsy search using the prompt engineer's output.  
 5️⃣ **Image Processing** → Create multiple print-ready versions in standard sizes based on aspect ratio.  
 6️⃣ **Mockup Generation** → Create product mockups with templates matched to the aspect ratio.  
 7️⃣ **Listing Creation** → Organize files and compile all details into a complete Etsy listing.
 
 ### **CrewAI Agents & Tasks**
 
-| Agent Name           | Task Description                                                            | Tools Used                      |
-| -------------------- | --------------------------------------------------------------------------- | ------------------------------- |
-| **Idea Generator**   | Generate unique concepts with aspect ratio determination and user approval. | OpenAI API, JsonSaveTool        |
-| **Prompt Engineer**  | Convert concepts into AI prompts with aspect ratio preservation.            | OpenAI API                      |
-| **Image Generator**  | Create images from prompts using specified aspect ratio with user approval. | ReplicateTool                   |
-| **SEO Researcher**   | Find best keywords & optimize description.                                  | OpenAI API, JsonSaveTool        |
-| **Image Processor**  | Create multiple print-ready versions based on aspect ratio.                 | ImageProcessingTool             |
-| **Mockup Generator** | Generate product mockups with aspect ratio-aware templates.                 | DynamicMockupTool               |
-| **Listing Creator**  | Organize files and compile details into a complete Etsy listing.            | FileOrganizerTool, JsonSaveTool |
+| Agent Name           | Task Description                                                                 | Tools Used                      |
+| -------------------- | -------------------------------------------------------------------------------- | ------------------------------- |
+| **Idea Generator**   | Generate unique concepts with aspect ratio determination and user approval.      | OpenAI API, JsonSaveTool        |
+| **Prompt Engineer**  | Convert concepts into AI prompts with aspect ratio preservation and JSON saving. | OpenAI API, JsonSaveTool        |
+| **Image Generator**  | Create images from prompts using specified aspect ratio with user approval.      | ReplicateTool                   |
+| **SEO Researcher**   | Find best keywords & optimize description using prompt engineer's output.        | OpenAI API, JsonSaveTool        |
+| **Image Processor**  | Create multiple print-ready versions based on aspect ratio.                      | ImageProcessingTool             |
+| **Mockup Generator** | Generate product mockups with aspect ratio-aware templates.                      | DynamicMockupTool               |
+| **Listing Creator**  | Organize files and compile details into a complete Etsy listing.                 | FileOrganizerTool, JsonSaveTool |
 
 ### **Tools**
 

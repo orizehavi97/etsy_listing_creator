@@ -72,10 +72,34 @@ create_prompt:
     Your output should be a JSON object with two keys:
     - "prompt": The well-structured text prompt for image generation
     - "aspect_ratio": The aspect ratio from the concept (either "portrait" or "landscape")
+
+    After creating the prompt, you MUST save it as a JSON file using the JsonSaveTool:
+    ```python
+    from etsy_listing_creator.tools import JsonSaveTool
+
+    json_saver = JsonSaveTool()
+    result = json_saver.run({
+        "data": {
+            "prompt": "your generated prompt",
+            "aspect_ratio": "portrait" or "landscape"
+        },
+        "filename": "output/prompt_data.json"
+    })
+
+    return {
+        "status": "success",
+        "prompt_data": {
+            "prompt": "your generated prompt",
+            "aspect_ratio": "portrait" or "landscape"
+        },
+        "file_path": result
+    }
+    ```
   expected_output: >
     A JSON object containing:
-    - "prompt": A well-structured text prompt that includes all technical and stylistic details required for high-quality image generation
-    - "aspect_ratio": The aspect ratio from the concept (either "portrait" or "landscape")
+      - "status": "success" or "error"
+      - "prompt_data": The prompt and aspect ratio data
+      - "file_path": Path to the saved prompt JSON file
   agent: prompt_engineer
 
 generate_image:
@@ -114,6 +138,10 @@ research_seo:
       - The title should be with this EXACT format: {2 words concept summary} | Indigo Bloom Downloadable PRINTABLE Digital | IB{Listing number}
       - An example for a correct title: "Futuristic Cityscape Art | Indigo Bloom Downloadable PRINTABLE Digital | IB12"
 
+    IMPORTANT: Use the prompt engineer's output to understand the concept and style.
+    The prompt engineer provides a JSON object with "prompt" and "aspect_ratio" keys.
+    Use the prompt text to understand the concept and style for better SEO optimization.
+
     Provide a brief rationale for each recommendation to demonstrate the analysis process.
 
     IMPORTANT: After generating the SEO data, you MUST save it as a JSON file using the JsonSaveTool.
@@ -142,10 +170,9 @@ research_seo:
     Make sure to include the saved file path in your response so it can be used by subsequent tasks.
   expected_output: >
     A JSON structure containing:
-      - "keywords": [array of optimized keywords],
-      - "title": optimized title string,
-      - "description": SEO-enhanced listing description.
-    The SEO data should be saved to a JSON file and the path to this file should be included in the response.
+      - "status": "success" or "error"
+      - "seo_data": The SEO optimization data
+      - "file_path": Path to the saved SEO JSON file
   agent: seo_researcher
 
 process_image:

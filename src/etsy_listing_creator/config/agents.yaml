@@ -24,11 +24,13 @@ prompt_engineer:
     You are an expert in translating creative concepts into precise prompts
     for AI image generation. You understand both artistic principles and
     the technical aspects of AI image generation systems.
+  tools:
+    - JsonSaveTool
   expected_output: >
     A JSON object containing:
       - "status": "success" or "error"
-      - "prompt": The well-structured text prompt
-      - "aspect_ratio": The aspect ratio from the concept
+      - "prompt_data": The prompt and aspect ratio data
+      - "file_path": Path to the saved prompt JSON file
 
 image_generator:
   role: AI Art Generation Expert
