@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Optional
 import json
+import shutil  # Add shutil for file copying
 
 import requests
 from pydantic import Field, PrivateAttr, BaseModel
@@ -338,7 +339,8 @@ class DynamicMockupTool(BaseTool):
         print(
             f"\nGenerating {total_templates} different mockups for aspect ratio: {aspect_ratio or 'default'}..."
         )
-
+        mockup_names = ["1", "3", "4", "5"]
+        mockup_current_index = 0
         for template_name, uuids in templates_to_use.items():
             try:
                 print(
@@ -405,7 +407,8 @@ class DynamicMockupTool(BaseTool):
                     )
                     continue
 
-                output_path = self._output_dir / f"mockup_{template_name}.png"
+                output_path = self._output_dir / f"{mockup_names[mockup_current_index]}.png"
+                mockup_current_index += 1
                 with open(output_path, "wb") as f:
                     f.write(mockup_response.content)
 
@@ -424,6 +427,25 @@ class DynamicMockupTool(BaseTool):
         print(
             f"\nMockup generation complete: {successful_templates}/{total_templates} templates processed successfully"
         )
+
+        # Copy additional mockup files
+        try:
+            # Get the input image directory
+            input_dir = Path(image_path).parent.parent
+
+            # Copy 2.png and 6.png to the output directory
+            additional_files = ["2.png", "6.png"]
+            for file_name in additional_files:
+                source_path = input_dir / file_name
+                if source_path.exists():
+                    dest_path = self._output_dir / file_name
+                    shutil.copy2(source_path, dest_path)
+                    print(f"✓ Copied additional mockup: {file_name}")
+                    mockup_paths.append(str(dest_path))
+                else:
+                    print(f"✗ Additional mockup file not found: {file_name}")
+        except Exception as e:
+            print(f"✗ Error copying additional mockups: {str(e)}")
 
         if not mockup_paths:
             raise RuntimeError(

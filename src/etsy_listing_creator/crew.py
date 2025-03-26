@@ -39,11 +39,8 @@ class EtsyListingCreator:
         agents = {}
         tools = {
             "idea_generator": [JsonSaveTool()],
-            "image_generator": [
-                ReplicateTool()
-            ],  # Using Replicate instead of StabilityAI
-            # Use ImageProcessingTool for image processing
-            "image_processor": [ImageProcessingTool()],
+            "image_generator": [ReplicateTool()],  # Using Replicate instead of StabilityAI
+            "image_processor": [ImageProcessingTool()],# Use ImageProcessingTool for image processing
             "mockup_generator": [DynamicMockupTool()],
             "seo_researcher": [JsonSaveTool()],
             "listing_creator": [JsonSaveTool(), FileOrganizerTool()],
@@ -67,11 +64,11 @@ class EtsyListingCreator:
 
         tasks = {}
         for task_id, config in tasks_config.items():
-            tasks[task_id] = Task(
-                description=config["description"],
-                expected_output=config["expected_output"],
-                agent=self.agents[config["agent"]],
-            )
+                tasks[task_id] = Task(
+                    description=config["description"],
+                    expected_output=config["expected_output"],
+                    agent=self.agents[config["agent"]],
+                )
 
         # Set up task dependencies to ensure proper data flow
         task_dependencies = {
@@ -147,7 +144,6 @@ class EtsyListingCreator:
                 return {"status": "error", "message": str(e)}
         else:
             return {"status": "error", "message": "Unexpected result type"}
-
 
 if __name__ == "__main__":
     count = int(input("How many listings do you want to create? "))
