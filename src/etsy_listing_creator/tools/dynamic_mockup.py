@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import json
 import shutil  # Add shutil for file copying
+from PIL import Image  # Add PIL for image dimension calculation
 
 import requests
 from pydantic import Field, PrivateAttr, BaseModel
@@ -35,16 +36,16 @@ class DynamicMockupTool(BaseTool):
     _portrait_templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
             "1_p": {
-                "mockup_uuid": "fa9a9b28-2ed4-4e38-8b34-6968192b513b",
-                "smart_object_uuid": "b60eb5f7-e1c3-48aa-88ee-1a2b8e713c2b",
+                "mockup_uuid": "172c173a-491e-4332-91fa-dac4d877339c",
+                "smart_object_uuid": "f682264c-b87c-441a-a217-53feb086b5fd"
             },
             "2_p": {
                 "mockup_uuid": "0575ee59-47c2-4cb5-bb85-f6ef4295494d",
                 "smart_object_uuid": "90ba62ab-460e-4762-8c07-ff81f391f8e7",
             },
             "3_p": {
-                "mockup_uuid": "801e24ac-981f-4ba8-a70b-e39d0ba9bebf",
-                "smart_object_uuid": "ebbbdf68-b351-4f0f-8f1f-f65427d5dbff",
+                "mockup_uuid": "d99c3c90-7efb-4b98-8aca-9ec52bb17b56",
+                "smart_object_uuid": "ecb9fb81-f7c7-4816-addd-acbb4f98aa14",
             },
             "4_p": {
                 "mockup_uuid": "1fc4c170-87aa-451c-9a10-5988d48b2b6d",
@@ -296,6 +297,80 @@ class DynamicMockupTool(BaseTool):
             print(f"Error uploading image: {str(e)}")
             raise RuntimeError(f"Failed to upload image: {str(e)}")
 
+    def _get_image_dimensions(self, image_path: str) -> Tuple[int, int]:
+        """
+        Get the dimensions of an image file.
+        
+        Args:
+            image_path: Path to the image file
+            
+        Returns:
+            Tuple of (width, height)
+        """
+        try:
+            with Image.open(image_path) as img:
+                return img.size
+        except Exception as e:
+            print(f"Warning: Could not get image dimensions: {str(e)}")
+            return (0, 0)  # Return default values if we can't get dimensions
+
+    def _calculate_scale(self, image_width: int, image_height: int, template_name: str) -> float:
+        """
+        Calculate the appropriate scale factor for the image based on template and image dimensions.
+        
+        Args:
+            image_width: Width of the input image
+            image_height: Height of the input image
+            template_name: Name of the template being used
+            
+        Returns:
+            Float value representing the scale factor
+        """
+        # Define template placeholder dimensions (width, height)
+        template_dimensions = {
+            # Portrait templates (3:4 aspect ratio)
+            "1_p": (3712, 4928),
+            "2_p": (3712, 4928),
+            "3_p": (3712, 4928),
+            "4_p": (3712, 4928),
+            
+            # Landscape templates (4:3 aspect ratio)
+            "1_l": (4928, 3712),
+            "2_l": (4928, 3712),
+            "3_l": (4928, 3712),
+            "4_l": (4928, 3712),
+            
+            # Default/legacy templates
+            "frame-mockup": (1000, 1000),
+            "wall-art-mockup": (1000, 1000),
+            "canvas-print-mockup": (1000, 1000),
+            "poster-mockup": (1000, 1000),
+            "living-room-mockup": (1000, 1000)
+        }
+        
+        # Get template dimensions, default to 1000x1000 if template not found
+        template_width, template_height = template_dimensions.get(template_name, (1000, 1000))
+        
+        if image_width == 0 or image_height == 0:
+            return 1.0  # Return default scale if we don't have image dimensions
+            
+        # Calculate aspect ratios
+        image_ratio = image_width / image_height
+        template_ratio = template_width / template_height
+        
+        # Calculate scale based on which dimension needs to fit
+        if image_ratio > template_ratio:
+            # Image is wider relative to height - fit to height
+            scale = template_height / image_height
+        else:
+            # Image is taller relative to width - fit to width
+            scale = template_width / image_width
+            
+        # Add a small buffer to ensure complete coverage
+        scale *= 1.02
+        
+        return scale
+
     def _run(
         self,
         image_path: str,
@@ -313,20 +388,19 @@ class DynamicMockupTool(BaseTool):
         Returns:
             List of paths to the generated mockup files
         """
-        # Select templates to use based on aspect ratio
         templates_to_use = self.select_templates(template_names, aspect_ratio)
-
         mockup_paths = []
         successful_templates = 0
         total_templates = len(templates_to_use)
 
-        # Check if the image_path is a URL or a local file path
+        # Get image dimensions if it's a local file
+        image_width, image_height = self._get_image_dimensions(image_path)
+
+        # Upload image or use URL
         if image_path.startswith(("http://", "https://")):
-            # It's already a URL, use it directly
             image_url = image_path
             print(f"Using provided image URL: {image_url}")
         else:
-            # It's a local file path, we need to upload it
             try:
                 image_url = self._upload_image(image_path)
                 print(f"Image uploaded successfully. Using URL: {image_url}")
@@ -335,19 +409,19 @@ class DynamicMockupTool(BaseTool):
                 print("Falling back to sandbox image for testing purposes.")
                 image_url = "https://app-dynamicmockups-production.s3.eu-central-1.amazonaws.com/static/api_sandbox_icon.png"
 
-        # Generate mockups for each template
-        print(
-            f"\nGenerating {total_templates} different mockups for aspect ratio: {aspect_ratio or 'default'}..."
-        )
+        print(f"\nGenerating {total_templates} different mockups for aspect ratio: {aspect_ratio or 'default'}...")
         mockup_names = ["1", "3", "4", "5"]
         mockup_current_index = 0
+        
         for template_name, uuids in templates_to_use.items():
             try:
-                print(
-                    f"\nProcessing template {successful_templates + 1}/{total_templates}: {template_name}"
-                )
+                print(f"\nProcessing template {successful_templates + 1}/{total_templates}: {template_name}")
+                
+                # Calculate appropriate scale for this template
+                scale = self._calculate_scale(image_width, image_height, template_name)
+                print(f"Calculated scale factor: {scale:.2f}")
 
-                # Prepare the mockup request data
+                # Prepare the mockup request data with calculated scale
                 data = {
                     "mockup_uuid": uuids["mockup_uuid"],
                     "smart_objects": [
@@ -355,10 +429,10 @@ class DynamicMockupTool(BaseTool):
                             "uuid": uuids["smart_object_uuid"],
                             "asset": {"url": image_url},
                             "position": {
-                                "x": 0.5,  # Center horizontally (0.5 = 50%)
-                                "y": 0.5,  # Center vertically (0.5 = 50%)
-                                "scale": 1.0,  # Maintain original scale
-                                "rotation": 0  # No rotation
+                                "x": 0.5,  # Center horizontally
+                                "y": 0.5,  # Center vertically
+                                "scale": scale,  # Use calculated scale
+                                "rotation": 0
                             }
                         }
                     ],
