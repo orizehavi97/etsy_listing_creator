@@ -32,24 +32,24 @@ class DynamicMockupTool(BaseTool):
     _output_dir: Path = PrivateAttr()
     _base_url: str = PrivateAttr(default="https://app.dynamicmockups.com/api/v1")
 
-    # Portrait-oriented templates (3:4 aspect ratio)
+     # Portrait-oriented templates (3:4 aspect ratio)
     _portrait_templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
             "1_p": {
-                "mockup_uuid": "172c173a-491e-4332-91fa-dac4d877339c",
-                "smart_object_uuid": "f682264c-b87c-441a-a217-53feb086b5fd"
+                "mockup_uuid": "dcdda51a-101f-483c-adaa-4a742c610c98",
+                "smart_object_uuid": "7dacac7b-9616-416f-816c-3f19b7e2ed50"
             },
             "2_p": {
-                "mockup_uuid": "0575ee59-47c2-4cb5-bb85-f6ef4295494d",
-                "smart_object_uuid": "90ba62ab-460e-4762-8c07-ff81f391f8e7",
+                "mockup_uuid": "d9e02e95-c872-4099-97fe-c4184484507d",
+                "smart_object_uuid": "a594ec37-2fa8-4776-9bd1-8cb66cd225e2",
             },
             "3_p": {
-                "mockup_uuid": "d99c3c90-7efb-4b98-8aca-9ec52bb17b56",
-                "smart_object_uuid": "ecb9fb81-f7c7-4816-addd-acbb4f98aa14",
+                "mockup_uuid": "cf9eec4b-111a-4922-9dd2-dcba61c5c56e",
+                "smart_object_uuid": "4d0686c3-6d94-4af2-a928-a707fc79ca1d",
             },
             "4_p": {
-                "mockup_uuid": "1fc4c170-87aa-451c-9a10-5988d48b2b6d",
-                "smart_object_uuid": "cb7e2c6b-400f-4fd9-9b51-eae4681f5de3",
+                "mockup_uuid": "9fc0a066-4217-468f-aa45-36323829023f",
+                "smart_object_uuid": "46269b41-dab5-40fc-b84d-1ef7efef3484",
             },
 
         }
@@ -59,24 +59,23 @@ class DynamicMockupTool(BaseTool):
     _landscape_templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={
             "1_l": {
-                "mockup_uuid": "67ab2a9d-adee-4ff0-9e64-c897628a1d77",
-                "smart_object_uuid": "79608905-51fc-4b63-889d-c93dd6aa5784",
+                "mockup_uuid": "8664abf7-97d6-4ab4-a181-9a70ffa6a5f5",
+                "smart_object_uuid": "5f5aabf6-dc0f-46a7-b74e-1b139cf3bf9a",
             },
             "2_l": {
-                "mockup_uuid": "64e30038-8554-4290-acdf-530c5f77c146",
-                "smart_object_uuid": "377b3c81-618d-437b-a179-44afb1d83347",
+                "mockup_uuid": "2a68a11d-d2b9-48e2-b5a9-d5e77c1f0062",
+                "smart_object_uuid": "ae9401e2-ca33-4650-8ae7-511986fac8a0",
             },
             "3_l": {
-                "mockup_uuid": "ce75acf7-ff28-4976-9ac1-354359d4b87e",
-                "smart_object_uuid": "410cdf57-4f0e-4b4d-b4a6-2cf09b28e87e",
+                "mockup_uuid": "bcebde71-22f5-471e-8f9e-e15886166bef",
+                "smart_object_uuid": "2bfaee75-ac36-4908-8ff1-b6d22ce33fe2",
             },
             "4_l": {
-                "mockup_uuid": "051c159e-9a1e-4b22-a1be-79cc4e074a85",
-                "smart_object_uuid": "9342e55c-71ce-4e06-bb98-3e90615522f2",
+                "mockup_uuid": "ca194ffe-5329-44a8-ad6d-da1282b242ea",
+                "smart_object_uuid": "be72c1f0-f6d3-4b0e-97c5-ff3e20fdbb8b",
             },
         }
     )
-
     # Default templates (for backward compatibility)
     _templates: Dict[str, Dict[str, str]] = PrivateAttr(
         default={

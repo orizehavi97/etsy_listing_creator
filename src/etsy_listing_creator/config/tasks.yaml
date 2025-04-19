@@ -1,6 +1,6 @@
 generate_concept:
   description: >
-    Generate a unique, innovative, eye-catching and marketable wall art concept.
+    Generate a unique, innovative, eye-catching, and marketable wall art concept. 
     Your output should include a detailed breakdown of the concept with explicit elements such as:
       - 5-7 Composition elements in short details, do not use surrealism, be creative, specific and unique
       - 3-5 Narrative or thematic elements that resonate with a specific target audience.
@@ -8,6 +8,7 @@ generate_concept:
         based on the composition and visual impact of the concept.
     Provide the output in a structured JSON format with keys: "style", "theme", "target_audience", and "aspect_ratio".
     For aspect_ratio, specify either "portrait" or "landscape" based on which would best showcase the concept.
+    Ensure the concept is appealing, detailed enough for easy visualization, and optimized for creating high-quality digital prints and mockups.
 
     IMPORTANT: After generating the concept, you MUST save it as a JSON file using the JsonSaveTool.
     The tool will ask the user if they want to use this concept. If the user rejects the concept,
@@ -63,8 +64,8 @@ generate_concept:
 create_prompt:
   description: >
     Transform the previous art concept into a highly detailed, structured prompt for Stability AI's Flux model: 
-    Details: [Brief, vivid description of key elements of the concept]
-    Style: hyper-realistic, digital watercolor, minimalist (choose one or combine as needed)
+    Details: Write a vivid, imaginative description highlighting the most visually compelling composition and narrative elements from the previous concept. Focus on evoking imagery rather than prescribing exact arrangements, to allow Flux's creativity to flourish.
+    Style: Clearly specify an artistic style or blend of styles to fit the concept
     Stick to indigo blue and honey orange colors theme since it's our shops niche
     Make sure to include "Style of TOK, wall art design, indigo blue and honey orange colors" at the end of the prompt as plain text
 
@@ -132,11 +133,11 @@ research_seo:
     The output should include:
       - A ranked list of 13 effective keywords based on search volume and relevancy.
       - A suggested title that integrates high-impact keywords.
-      - A detailed, SEO-friendly description tailored to attract the target audience.
-
-    Title guidelines:
-      - The title should be with this EXACT format: {2 words concept summary} | Indigo Bloom Downloadable PRINTABLE Digital | IB{Listing number}
-      - An example for a correct title: "Futuristic Cityscape Art | Indigo Bloom Downloadable PRINTABLE Digital | IB12"
+      - A detailed, SEO-friendly, one sentence description tailored to attract the target audience.
+    Important: make sure each keyword does not exceed 20 characters
+    Keyword guidelines: make sure to use a variety of relevant keyword phrases. Repeating keywords in the title and tags can strengthen our relevance, but only to an extent.
+    Title guidelines: The title format should be: "{2~3 words concept summary} | Indigo Bloom Downloadable PRINTABLE Digital | IB{Listing number}. an example of a correct title: "Resilience Expressionism | Indigo Bloom Downloadable PRINTABLE Digital | IB58" or "Connection in Colors | Indigo Bloom Downloadable PRINTABLE Digital | IB89"
+    Description guidelines: Etsy uses the words in your description when ranking their search results. Etsy recommends that you incorporate relevant keywords in the first few sentences. Make sure to add them in a way that sounds human and avoid copying your title verbatim or simply listing your top keywords. Since your listings' descriptions can also help convert views to sales, we suggest keeping your descriptions short, informative, and engaging. 
 
     IMPORTANT: Use the prompt engineer's output to understand the concept and style.
     The prompt engineer provides a JSON object with "prompt" and "aspect_ratio" keys.
